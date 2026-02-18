@@ -1,0 +1,59 @@
+/**
+ * The contents of this file are subject to the license and copyright
+ * detailed in the LICENSE and NOTICE files at the root of the source
+ * tree and available online at
+ *
+ * http://www.dspace.org/license/
+ */
+package org.dspace.app.reporting.service;
+
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
+
+import org.dspace.app.reporting.model.UserAction;
+import org.dspace.app.reporting.model.UserActivityStats;
+import org.dspace.core.Context;
+
+/**
+ * Service for generating user activity reports.
+ */
+public interface UserActivityReportService {
+
+    /**
+     * Get all actions (submissions and reviews) from provenance metadata.
+     *
+     * @param context the DSpace context
+     * @return list of all user actions extracted from provenance metadata
+     * @throws SQLException if database error occurs
+     */
+    List<UserAction> getAllActions(Context context) throws SQLException;
+
+    /**
+     * Get aggregated statistics per user (submissions and reviews)
+     *
+     * @param context the DSpace context
+     * @return map of user email to UserActivityStats
+     * @throws SQLException if database error occurs
+     */
+    Map<String, UserActivityStats> getUserStatistics(Context context) throws SQLException;
+
+    /**
+     * Get statistics for a specific user
+     *
+     * @param context the DSpace context
+     * @param email   the email of the user
+     * @return UserActivityStats for the user or null if not found
+     * @throws SQLException if database error occurs
+     */
+    UserActivityStats getUserStatistics(Context context, String email) throws SQLException;
+
+    /**
+     * Get total submissions and reviews count
+     *
+     * @param context the DSpace context
+     * @return map with keys "submissions" and "reviews" and integer values
+     * @throws SQLException if database error occurs
+     */
+    Map<String, Integer> getTotalStatistics(Context context) throws SQLException;
+}
