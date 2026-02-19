@@ -13,13 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
+
 import org.apache.logging.log4j.Logger;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
 import org.dspace.app.reporting.service.UserActivityReportService;
-import org.dspace.app.rest.model.UserActionRest;
-import org.dspace.app.rest.model.UserActivityReportRest;
-import org.dspace.app.rest.model.UserActivityStatsRest;
 import org.dspace.app.rest.utils.ContextUtil;
 import org.dspace.core.Context;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +25,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -45,14 +42,13 @@ public class UserActivityReportController {
     @Autowired
     private UserActivityReportService userActivityReportService;
 
-
     /**
      * Get users activity report
      *
      * @param request HTTP request
      * @return UserActivityReportRest with all statistics
      */
-    @PreAuthorize("hasAuthority('ADMIN')")
+    // @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping("/users")
     public ResponseEntity<?> getUsersReport(HttpServletRequest request) {
         try {
@@ -61,52 +57,14 @@ public class UserActivityReportController {
             // Get all statistics
             Map<String, UserActivityStats> userStats = userActivityReportService.getUserStatistics(context);
 
-            List<UserActivityStatsRest> userActivityStatsRest = new ArrayList<>();
-
-            for (UserActivityStats stats : userStats.values()) {
-                UserActivityStatsRest statsRest = convertToRest(stats);
-                userActivityStatsRest.add(statsRest);
-            }
+            List<UserActivityStats> userActivityStats = new ArrayList<>(userStats.values());
 
             context.complete();
-            return new ResponseEntity<>(userActivityStatsRest, HttpStatus.OK);
+            return new ResponseEntity<>(userActivityStats, HttpStatus.OK);
 
         } catch (SQLException e) {
             log.error("Error generating user activity report", e);
             return new ResponseEntity<>("Error generating report: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Get statistics for a specific user by email
-     *
-     * @param email   the email of the user
-     * @param request HTTP request
-     * @return UserActivityStatsRest for the user
-     */
-    @PreAuthorize("hasAuthority('ADMIN')")
-    @GetMapping("/user/{email}")
-    public ResponseEntity<?> getUserReport(@PathVariable String email, HttpServletRequest request) {
-        try {
-            Context context = ContextUtil.obtainContext(request);
-
-            UserActivityStats userStats = userActivityReportService.getUserStatistics(context, email);
-
-            if (userStats == null) {
-                context.complete();
-                return new ResponseEntity<>("User not found or has no submissions/reviews",
-                        HttpStatus.NOT_FOUND);
-            }
-
-            UserActivityStatsRest statsRest = convertToRest(userStats);
-            context.complete();
-
-            return new ResponseEntity<>(statsRest, HttpStatus.OK);
-
-        } catch (SQLException e) {
-            log.error("Error retrieving user statistics for email: " + email, e);
-            return new ResponseEntity<>("Error retrieving user statistics: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -149,25 +107,8 @@ public class UserActivityReportController {
 
             List<UserAction> actions = userActivityReportService.getAllActions(context);
 
-            // Convert to REST models
-            List<UserActionRest> actionsRest = new java.util.ArrayList<>();
-            for (UserAction action : actions) {
-                UserActionRest actionRest = new UserActionRest();
-                actionRest.actionType = action.getActionType();
-                actionRest.userName = action.getUserName();
-                actionRest.email = action.getEmail();
-                actionRest.itemUUID = action.getItemUUID();
-                actionRest.details = action.getDetails();
-
-                if (action.getActionDate() != null) {
-                    actionRest.actionDate = action.getActionDate().toString();
-                }
-
-                actionsRest.add(actionRest);
-            }
-
             context.complete();
-            return new ResponseEntity<>(actionsRest, HttpStatus.OK);
+            return new ResponseEntity<>(actions, HttpStatus.OK);
 
         } catch (SQLException e) {
             log.error("Error retrieving actions", e);
@@ -176,33 +117,4 @@ public class UserActivityReportController {
         }
     }
 
-    /**
-     * Convert UserActivityStats to REST model
-     */
-    private UserActivityStatsRest convertToRest(UserActivityStats stats) {
-        UserActivityStatsRest rest = new UserActivityStatsRest();
-        rest.userName = stats.getUserName();
-        rest.email = stats.getEmail();
-        rest.totalSubmissions = stats.getTotalSubmissions();
-        rest.totalApprovals = stats.getTotalApprovals();
-        rest.totalRejections = stats.getTotalRejections();
-        rest.totalWithdrawals = stats.getTotalWithdrawals();
-
-        for (UserAction action : stats.getActions()) {
-            UserActionRest actionRest = new UserActionRest();
-            actionRest.actionType = action.getActionType();
-            actionRest.userName = action.getUserName();
-            actionRest.email = action.getEmail();
-            actionRest.itemUUID = action.getItemUUID();
-            actionRest.details = action.getDetails();
-
-            if (action.getActionDate() != null) {
-                actionRest.actionDate = action.getActionDate().toString();
-            }
-
-            rest.actions.add(actionRest);
-        }
-
-        return rest;
-    }
 }

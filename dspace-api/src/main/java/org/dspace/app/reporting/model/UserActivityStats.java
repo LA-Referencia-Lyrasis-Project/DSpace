@@ -7,8 +7,6 @@
  */
 package org.dspace.app.reporting.model;
 
-import java.util.ArrayList;
-import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -41,6 +39,12 @@ public class UserActivityStats {
     private int totalApprovals;
 
     /**
+     * Total number of reviews
+     */
+    @JsonProperty("totalReviews")
+    private int totalReviews;
+
+    /**
      * Total number of rejections
      */
     @JsonProperty("totalRejections")
@@ -52,24 +56,16 @@ public class UserActivityStats {
     @JsonProperty("totalWithdrawals")
     private int totalWithdrawals;
 
-    /**
-     * List of all actions by this user
-     */
-    @JsonProperty("actions")
-    private List<UserAction> actions;
 
-    public UserActivityStats() {
-        this.actions = new ArrayList<>();
-    }
 
     public UserActivityStats(String userName, String email) {
         this.userName = userName;
         this.email = email;
-        this.actions = new ArrayList<>();
         this.totalSubmissions = 0;
         this.totalApprovals = 0;
         this.totalRejections = 0;
         this.totalWithdrawals = 0;
+        this.totalReviews = 0;
     }
 
     // Getters and Setters
@@ -121,26 +117,26 @@ public class UserActivityStats {
         this.totalWithdrawals = totalWithdrawals;
     }
 
-    public List<UserAction> getActions() {
-        return actions;
+    public int getTotalReviews() {
+        return totalReviews;
     }
 
-    public void setActions(List<UserAction> actions) {
-        this.actions = actions;
+    public void setTotalReviews(int totalReviews) {
+        this.totalReviews = totalReviews;
     }
 
-    public void addAction(UserAction action) {
-        this.actions.add(action);
-        String actionType = action.getActionType();
-
+    public void countAction(String actionType) {
         if ("SUBMITTED".equals(actionType)) {
             this.totalSubmissions++;
         } else if ("APPROVED".equals(actionType)) {
             this.totalApprovals++;
+            this.totalReviews++;
         } else if ("REJECTED".equals(actionType)) {
             this.totalRejections++;
+            this.totalReviews++;
         } else if ("WITHDRAWN".equals(actionType)) {
             this.totalWithdrawals++;
+            this.totalReviews++;
         }
     }
 
@@ -150,10 +146,10 @@ public class UserActivityStats {
                 "userName='" + userName + '\'' +
                 ", email='" + email + '\'' +
                 ", totalSubmissions=" + totalSubmissions +
+                ", totalReviews=" + totalReviews +
                 ", totalApprovals=" + totalApprovals +
                 ", totalRejections=" + totalRejections +
                 ", totalWithdrawals=" + totalWithdrawals +
-                ", actions=" + actions +
                 '}';
     }
 }

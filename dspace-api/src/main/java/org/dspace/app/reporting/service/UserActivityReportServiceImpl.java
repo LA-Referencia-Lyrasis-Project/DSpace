@@ -117,7 +117,7 @@ public class UserActivityReportServiceImpl implements UserActivityReportService 
                     userStats.setUserName(action.getUserName());
                 }
 
-                userStats.addAction(action);
+                userStats.countAction(action.getActionType());
             }
 
             log.info("Generated statistics for " + stats.size() + " unique users");
@@ -158,14 +158,15 @@ public class UserActivityReportServiceImpl implements UserActivityReportService 
                 String actionType = action.getActionType();
                 if ("SUBMITTED".equals(actionType)) {
                     submissions++;
-                } else if ("REVIEWED".equals(actionType)) {
-                    reviews++;
                 } else if ("APPROVED".equals(actionType)) {
                     approvals++;
+                    reviews++;
                 } else if ("REJECTED".equals(actionType)) {
                     rejections++;
+                    reviews++;
                 } else if ("WITHDRAWN".equals(actionType)) {
                     withdrawals++;
+                    reviews++;
                 }
             }
 
