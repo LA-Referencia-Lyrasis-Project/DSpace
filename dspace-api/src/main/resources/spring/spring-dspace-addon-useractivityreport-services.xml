@@ -19,5 +19,5 @@
 
     <context:annotation-config/> <!-- allows us to use spring annotations in beans -->
 
-    <bean class="org.dspace.app.reporting.service.UserActivityReportServiceImpl" id="org.dspace.app.reporting.service.UserActivityReportService" />
+    <bean class="org.dspace.app.reporting.service.UsersActivityReportServiceImpl" id="org.dspace.app.reporting.service.UsersActivityReportService" />
 </beans>

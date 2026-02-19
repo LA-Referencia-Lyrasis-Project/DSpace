@@ -13,12 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
-
 import org.apache.logging.log4j.Logger;
 import org.dspace.app.reporting.model.SummaryWithTrendData;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
-import org.dspace.app.reporting.service.UserActivityReportService;
+import org.dspace.app.reporting.service.UsersActivityReportService;
 import org.dspace.app.rest.utils.ContextUtil;
 import org.dspace.core.Context;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/reporting/user-activity")
-public class UserActivityReportController {
+public class UsersActivityReportController {
 
     private static final Logger log = org.apache.logging.log4j.LogManager
-            .getLogger(UserActivityReportController.class);
+            .getLogger(UsersActivityReportController.class);
 
     @Autowired
-    private UserActivityReportService userActivityReportService;
+    private UsersActivityReportService userActivityReportService;
 
     /**
      * Get users activity report

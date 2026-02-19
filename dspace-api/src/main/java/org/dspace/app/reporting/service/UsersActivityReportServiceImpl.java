@@ -35,10 +35,10 @@ import org.springframework.stereotype.Service;
  * by parsing provenance metadata.
  */
 @Service
-public class UserActivityReportServiceImpl implements UserActivityReportService {
+public class UsersActivityReportServiceImpl implements UsersActivityReportService {
 
     private static final Logger log = org.apache.logging.log4j.LogManager
-            .getLogger(UserActivityReportServiceImpl.class);
+            .getLogger(UsersActivityReportServiceImpl.class);
 
     @Autowired
     private MetadataFieldService metadataFieldService;

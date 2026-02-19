@@ -1,4 +1,4 @@
-# DSpace User Activity Reporting Feature - Implementation Guide
+# DSpace Users Activity Reporting Feature - Implementation Guide
 
 ## Quick Start
 

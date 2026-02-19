@@ -1,4 +1,4 @@
-# User Activity Reporting Feature - Summary
+# Users Activity Reporting Feature - Summary
 
 ## Overview
 

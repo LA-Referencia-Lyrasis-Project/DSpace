@@ -19,7 +19,7 @@ import org.dspace.core.Context;
 /**
  * Service for generating user activity reports.
  */
-public interface UserActivityReportService {
+public interface UsersActivityReportService {
 
     /**
      * Get all actions (submissions and reviews) from provenance metadata.
