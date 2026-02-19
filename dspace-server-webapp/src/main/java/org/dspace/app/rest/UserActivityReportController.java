@@ -8,6 +8,7 @@
 package org.dspace.app.rest;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -44,38 +45,31 @@ public class UserActivityReportController {
     @Autowired
     private UserActivityReportService userActivityReportService;
 
+
     /**
-     * Get full user activity report
+     * Get users activity report
      *
      * @param request HTTP request
      * @return UserActivityReportRest with all statistics
      */
     @PreAuthorize("hasAuthority('ADMIN')")
-    @GetMapping("/report")
-    public ResponseEntity<?> getFullReport(HttpServletRequest request) {
+    @GetMapping("/users")
+    public ResponseEntity<?> getUsersReport(HttpServletRequest request) {
         try {
             Context context = ContextUtil.obtainContext(request);
 
             // Get all statistics
             Map<String, UserActivityStats> userStats = userActivityReportService.getUserStatistics(context);
-            Map<String, Integer> totals = userActivityReportService.getTotalStatistics(context);
 
-            // Build response
-            UserActivityReportRest report = new UserActivityReportRest();
-            report.totalUsers = totals.getOrDefault("totalUsers", 0);
-            report.totalSubmissions = totals.getOrDefault("submissions", 0);
-            report.totalApprovals = totals.getOrDefault("approvals", 0);
-            report.totalRejections = totals.getOrDefault("rejections", 0);
-            report.totalWithdrawals = totals.getOrDefault("withdrawals", 0);
+            List<UserActivityStatsRest> userActivityStatsRest = new ArrayList<>();
 
-            // Convert each user stat to REST model
             for (UserActivityStats stats : userStats.values()) {
                 UserActivityStatsRest statsRest = convertToRest(stats);
-                report.userStats.add(statsRest);
+                userActivityStatsRest.add(statsRest);
             }
 
             context.complete();
-            return new ResponseEntity<>(report, HttpStatus.OK);
+            return new ResponseEntity<>(userActivityStatsRest, HttpStatus.OK);
 
         } catch (SQLException e) {
             log.error("Error generating user activity report", e);
