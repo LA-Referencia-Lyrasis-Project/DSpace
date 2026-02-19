@@ -15,6 +15,7 @@ import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.logging.log4j.Logger;
+import org.dspace.app.reporting.model.SummaryWithTrendData;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
 import org.dspace.app.reporting.service.UserActivityReportService;
@@ -113,6 +114,30 @@ public class UserActivityReportController {
         } catch (SQLException e) {
             log.error("Error retrieving actions", e);
             return new ResponseEntity<>("Error retrieving actions: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Get total statistics with trend data aggregated by month
+     *
+     * @param request HTTP request
+     * @return SummaryWithTrendData with totals and monthly trends
+     */
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @GetMapping("/summary-with-trends")
+    public ResponseEntity<?> getSummaryWithTrends(HttpServletRequest request) {
+        try {
+            Context context = ContextUtil.obtainContext(request);
+
+            SummaryWithTrendData summary = userActivityReportService.getTotalStatisticsWithTrends(context);
+
+            context.complete();
+            return new ResponseEntity<>(summary, HttpStatus.OK);
+
+        } catch (SQLException e) {
+            log.error("Error generating summary with trends", e);
+            return new ResponseEntity<>("Error generating summary with trends: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

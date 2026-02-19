@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
+import org.dspace.app.reporting.model.SummaryWithTrendData;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
 import org.dspace.core.Context;
@@ -56,4 +57,13 @@ public interface UserActivityReportService {
      * @throws SQLException if database error occurs
      */
     Map<String, Integer> getTotalStatistics(Context context) throws SQLException;
+
+    /**
+     * Get total statistics with trend data aggregated by month
+     *
+     * @param context the DSpace context
+     * @return SummaryWithTrendData containing totals and monthly trends
+     * @throws SQLException if database error occurs
+     */
+    SummaryWithTrendData getTotalStatisticsWithTrends(Context context) throws SQLException;
 }

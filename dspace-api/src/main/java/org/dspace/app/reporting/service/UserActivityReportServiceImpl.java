@@ -8,6 +8,7 @@
 package org.dspace.app.reporting.service;
 
 import java.sql.SQLException;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.logging.log4j.Logger;
+import org.dspace.app.reporting.model.SummaryWithTrendData;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
 import org.dspace.app.reporting.utils.ProvenanceParser;
@@ -191,5 +193,77 @@ public class UserActivityReportServiceImpl implements UserActivityReportService 
         }
 
         return totals;
+    }
+
+    @Override
+    public SummaryWithTrendData getTotalStatisticsWithTrends(Context context) throws SQLException {
+        try {
+            List<UserAction> allActions = getAllActions(context);
+
+            int submissions = 0;
+            int reviews = 0;
+            int approvals = 0;
+            int rejections = 0;
+            int withdrawals = 0;
+
+            // Trend data: Map of month (YYYY-MM) to action type counts
+            Map<String, Map<String, Integer>> trendData = new TreeMap<>();
+
+            for (UserAction action : allActions) {
+                String actionType = action.getActionType();
+
+                // Count totals
+                if ("SUBMITTED".equals(actionType)) {
+                    submissions++;
+                } else if ("APPROVED".equals(actionType)) {
+                    approvals++;
+                    reviews++;
+                } else if ("REJECTED".equals(actionType)) {
+                    rejections++;
+                    reviews++;
+                } else if ("WITHDRAWN".equals(actionType)) {
+                    withdrawals++;
+                    reviews++;
+                }
+
+                // Aggregate by month
+                if (action.getActionDate() != null) {
+                    YearMonth month = YearMonth.from(action.getActionDate());
+                    String monthKey = month.toString(); // Format: YYYY-MM
+
+                    Map<String, Integer> monthData = trendData.computeIfAbsent(monthKey, k -> new HashMap<>());
+
+                    // Initialize action type counters if not present
+                    monthData.putIfAbsent("SUBMITTED", 0);
+                    monthData.putIfAbsent("APPROVED", 0);
+                    monthData.putIfAbsent("REJECTED", 0);
+                    monthData.putIfAbsent("WITHDRAWN", 0);
+
+                    // Increment the appropriate counter
+                    int currentCount = monthData.get(actionType);
+                    monthData.put(actionType, currentCount + 1);
+                }
+            }
+
+            // Create summary with trends
+            SummaryWithTrendData summary = new SummaryWithTrendData(
+                    submissions,
+                    reviews,
+                    approvals,
+                    rejections,
+                    withdrawals,
+                    getUserStatistics(context).size());
+
+            summary.setTrendData(trendData);
+
+            log.info("Generated statistics with trends: " + submissions + " submissions, " + reviews
+                    + " reviews with " + trendData.size() + " months of trend data");
+
+            return summary;
+
+        } catch (Exception e) {
+            log.error("Error generating total statistics with trends: " + e.getMessage(), e);
+            throw new SQLException("Error generating total statistics with trends", e);
+        }
     }
 }
