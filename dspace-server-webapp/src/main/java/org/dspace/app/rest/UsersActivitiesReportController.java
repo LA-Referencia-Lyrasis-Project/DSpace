@@ -7,7 +7,6 @@
  */
 package org.dspace.app.rest;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.dspace.app.reporting.model.SummaryWithTrendData;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
-import org.dspace.app.reporting.service.UsersActivityReportService;
+import org.dspace.app.reporting.service.UsersActivitiesReportService;
 import org.dspace.app.rest.utils.ContextUtil;
 import org.dspace.core.Context;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,14 +32,14 @@ import org.springframework.web.bind.annotation.RestController;
  * Provides endpoints to retrieve statistics about user submissions and reviews
  */
 @RestController
-@RequestMapping("/api/reporting/user-activity")
-public class UsersActivityReportController {
+@RequestMapping("/api/reports/users-activities")
+public class UsersActivitiesReportController {
 
     private static final Logger log = org.apache.logging.log4j.LogManager
-            .getLogger(UsersActivityReportController.class);
+            .getLogger(UsersActivitiesReportController.class);
 
     @Autowired
-    private UsersActivityReportService userActivityReportService;
+    private UsersActivitiesReportService usersActivitiesReportService;
 
     /**
      * Get users activity report
@@ -48,21 +47,22 @@ public class UsersActivityReportController {
      * @param request HTTP request
      * @return UserActivityReportRest with all statistics
      */
-    // @PreAuthorize("hasAuthority('ADMIN')")
-    @GetMapping("/users")
-    public ResponseEntity<?> getUsersReport(HttpServletRequest request) {
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @GetMapping()
+    public ResponseEntity<?> getUsersActivitiesReport(HttpServletRequest request) {
         try {
             Context context = ContextUtil.obtainContext(request);
 
             // Get all statistics
-            Map<String, UserActivityStats> userStats = userActivityReportService.getUserStatistics(context);
+            Map<String, UserActivityStats> userStats = usersActivitiesReportService
+                    .getUsersActivitiesStatistics(context);
 
             List<UserActivityStats> userActivityStats = new ArrayList<>(userStats.values());
 
             context.complete();
             return new ResponseEntity<>(userActivityStats, HttpStatus.OK);
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             log.error("Error generating user activity report", e);
             return new ResponseEntity<>("Error generating report: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
@@ -81,12 +81,12 @@ public class UsersActivityReportController {
         try {
             Context context = ContextUtil.obtainContext(request);
 
-            Map<String, Integer> totals = userActivityReportService.getTotalStatistics(context);
+            Map<String, Integer> totals = usersActivitiesReportService.getTotalStatistics(context);
 
             context.complete();
             return new ResponseEntity<>(totals, HttpStatus.OK);
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             log.error("Error generating summary statistics", e);
             return new ResponseEntity<>("Error generating summary: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
@@ -105,12 +105,12 @@ public class UsersActivityReportController {
         try {
             Context context = ContextUtil.obtainContext(request);
 
-            List<UserAction> actions = userActivityReportService.getAllActions(context);
+            List<UserAction> actions = usersActivitiesReportService.getAllActions(context);
 
             context.complete();
             return new ResponseEntity<>(actions, HttpStatus.OK);
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             log.error("Error retrieving actions", e);
             return new ResponseEntity<>("Error retrieving actions: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
@@ -129,12 +129,12 @@ public class UsersActivityReportController {
         try {
             Context context = ContextUtil.obtainContext(request);
 
-            SummaryWithTrendData summary = userActivityReportService.getTotalStatisticsWithTrends(context);
+            SummaryWithTrendData summary = usersActivitiesReportService.getTotalStatisticsWithTrends(context);
 
             context.complete();
             return new ResponseEntity<>(summary, HttpStatus.OK);
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
             log.error("Error generating summary with trends", e);
             return new ResponseEntity<>("Error generating summary with trends: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);

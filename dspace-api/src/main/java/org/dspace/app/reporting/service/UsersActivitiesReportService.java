@@ -19,7 +19,7 @@ import org.dspace.core.Context;
 /**
  * Service for generating user activity reports.
  */
-public interface UsersActivityReportService {
+public interface UsersActivitiesReportService {
 
     /**
      * Get all actions (submissions and reviews) from provenance metadata.
@@ -37,17 +37,7 @@ public interface UsersActivityReportService {
      * @return map of user email to UserActivityStats
      * @throws SQLException if database error occurs
      */
-    Map<String, UserActivityStats> getUserStatistics(Context context) throws SQLException;
-
-    /**
-     * Get statistics for a specific user
-     *
-     * @param context the DSpace context
-     * @param email   the email of the user
-     * @return UserActivityStats for the user or null if not found
-     * @throws SQLException if database error occurs
-     */
-    UserActivityStats getUserStatistics(Context context, String email) throws SQLException;
+    Map<String, UserActivityStats> getUsersActivitiesStatistics(Context context) throws SQLException;
 
     /**
      * Get total submissions and reviews count

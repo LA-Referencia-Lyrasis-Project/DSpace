@@ -35,10 +35,10 @@ import org.springframework.stereotype.Service;
  * by parsing provenance metadata.
  */
 @Service
-public class UsersActivityReportServiceImpl implements UsersActivityReportService {
+public class UsersActivitiesReportServiceImpl implements UsersActivitiesReportService {
 
     private static final Logger log = org.apache.logging.log4j.LogManager
-            .getLogger(UsersActivityReportServiceImpl.class);
+            .getLogger(UsersActivitiesReportServiceImpl.class);
 
     @Autowired
     private MetadataFieldService metadataFieldService;
@@ -100,7 +100,7 @@ public class UsersActivityReportServiceImpl implements UsersActivityReportServic
     }
 
     @Override
-    public Map<String, UserActivityStats> getUserStatistics(Context context) throws SQLException {
+    public Map<String, UserActivityStats> getUsersActivitiesStatistics(Context context) throws SQLException {
         Map<String, UserActivityStats> stats = new TreeMap<>();
 
         try {
@@ -132,16 +132,6 @@ public class UsersActivityReportServiceImpl implements UsersActivityReportServic
         return stats;
     }
 
-    @Override
-    public UserActivityStats getUserStatistics(Context context, String email) throws SQLException {
-        try {
-            Map<String, UserActivityStats> allStats = getUserStatistics(context);
-            return allStats.get(email);
-        } catch (Exception e) {
-            log.error("Error retrieving statistics for user " + email + ": " + e.getMessage(), e);
-            throw new SQLException("Error retrieving user statistics", e);
-        }
-    }
 
     @Override
     public Map<String, Integer> getTotalStatistics(Context context) throws SQLException {
@@ -172,20 +162,19 @@ public class UsersActivityReportServiceImpl implements UsersActivityReportServic
                 }
             }
 
+            int uniqueUserCount = getUsersCount(allActions);
+
             totals.put("submissions", submissions);
             totals.put("reviews", reviews);
             totals.put("approvals", approvals);
             totals.put("rejections", rejections);
             totals.put("withdrawals", withdrawals);
-            totals.put("totalUsers", 0);
+            totals.put("totalUsers", uniqueUserCount);
 
-            // Count unique users
-            Map<String, UserActivityStats> userStats = getUserStatistics(context);
-            totals.put("totalUsers", userStats.size());
 
             log.info("Total statistics: " + submissions + " submissions, " + reviews + " reviews, "
                     + approvals + " approvals, " + rejections + " rejections, " + withdrawals
-                    + " withdrawals by " + userStats.size() + " users");
+                    + " withdrawals by " + uniqueUserCount + " users");
 
         } catch (Exception e) {
             log.error("Error generating total statistics: " + e.getMessage(), e);
@@ -193,6 +182,13 @@ public class UsersActivityReportServiceImpl implements UsersActivityReportServic
         }
 
         return totals;
+    }
+
+    private static int getUsersCount(List<UserAction> allActions) {
+        return Math.toIntExact(allActions.stream()
+                .map(UserAction::getEmail)
+                .distinct()
+                .count());
     }
 
     @Override
@@ -245,6 +241,8 @@ public class UsersActivityReportServiceImpl implements UsersActivityReportServic
                 }
             }
 
+            int uniqueUserCount = getUsersCount(allActions);
+
             // Create summary with trends
             SummaryWithTrendData summary = new SummaryWithTrendData(
                     submissions,
@@ -252,7 +250,7 @@ public class UsersActivityReportServiceImpl implements UsersActivityReportServic
                     approvals,
                     rejections,
                     withdrawals,
-                    getUserStatistics(context).size());
+                    uniqueUserCount);
 
             summary.setTrendData(trendData);
 
