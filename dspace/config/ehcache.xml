@@ -6,9 +6,8 @@
     http://www.dspace.org/license/
 -->
 <config xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
-        xmlns='http://www.ehcache.org/v3'
-        xsi:schemaLocation="http://www.ehcache.org/v3
-                            http://www.ehcache.org/schema/ehcache-core-3.7.xsd">
+    xmlns='http://www.ehcache.org/v3'
+    xsi:schemaLocation="http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.7.xsd">
 
     <cache-template name="iiif-default">
         <listeners>
@@ -62,8 +61,17 @@
         </resources>
     </cache-template>
 
-    <cache alias="manifests" uses-template="iiif-default"/>
-    <cache alias="canvasdimensions" uses-template="iiif-canvas"/>
-    <cache alias="sherpa.searchByJournalISSN" uses-template="sherpa-default"/>
+    <cache alias="manifests" uses-template="iiif-default" />
+    <cache alias="canvasdimensions" uses-template="iiif-canvas" />
+    <cache alias="sherpa.searchByJournalISSN" uses-template="sherpa-default" />
+
+    <cache alias="usersActivities.allActions">
+        <expiry>
+            <ttl unit="hours">1</ttl>
+        </expiry>
+        <resources>
+            <heap>1</heap>
+        </resources>
+    </cache>
 
 </config>
