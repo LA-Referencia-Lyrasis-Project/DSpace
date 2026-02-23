@@ -17,7 +17,6 @@ import org.dspace.app.reporting.utils.ProvenanceParser;
 import org.dspace.content.Item;
 import org.dspace.content.MetadataField;
 import org.dspace.content.MetadataValue;
-import org.dspace.content.service.ItemService;
 import org.dspace.content.service.MetadataFieldService;
 import org.dspace.content.service.MetadataValueService;
 import org.dspace.core.Context;
@@ -39,9 +38,6 @@ public class UsersActivitiesActionsCacheService {
 
     @Autowired
     private MetadataValueService metadataValueService;
-
-    @Autowired
-    private ItemService itemService;
 
     /**
      * Get all actions (submissions and reviews) from provenance metadata.
