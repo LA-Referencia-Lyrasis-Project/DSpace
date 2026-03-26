@@ -154,11 +154,70 @@ public class UsersActivitiesReportControllerIT extends AbstractControllerIntegra
 
                 getClient(token).perform(get("/api/reports/users-activities/actions"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$", Matchers.hasSize(2)))
-                                .andExpect(jsonPath("$[?(@.email=='user1@example.com')].actionType",
+                                .andExpect(jsonPath("$.totalElements", Matchers.is(2)))
+                                .andExpect(jsonPath("$.totalPages", Matchers.is(1)))
+                                .andExpect(jsonPath("$.currentPage", Matchers.is(0)))
+                                .andExpect(jsonPath("$.pageSize", Matchers.is(100)))
+                                .andExpect(jsonPath("$.content", Matchers.hasSize(2)))
+                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].actionType",
                                                 Matchers.contains("SUBMITTED")))
-                                .andExpect(jsonPath("$[?(@.email=='admin@example.com')].actionType",
-                                                Matchers.contains("APPROVED")));
+                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].itemUUID",
+                                                Matchers.contains(Matchers.notNullValue())))
+                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].itemId",
+                                                Matchers.contains(Matchers.notNullValue())))
+                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].itemTitle",
+                                                Matchers.contains("Item 1")))
+                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].actionType",
+                                                Matchers.contains("APPROVED")))
+                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].itemUUID",
+                                                Matchers.contains(Matchers.notNullValue())))
+                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].itemId",
+                                                Matchers.contains(Matchers.notNullValue())))
+                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].itemTitle",
+                                                Matchers.contains("Item 1")));
+        }
+
+        @Test
+        public void testGetAllActionsWithPaginationAndFilters() throws Exception {
+                context.turnOffAuthorisationSystem();
+                ItemBuilder.createItem(context, col)
+                                .withTitle("Paged Item")
+                                .withProvenanceData("Submitted by User One (user.one@example.com) on "
+                                                + "2024-01-15T12:00:00Z\n"
+                                                + "Approved for entry into archive by Admin User "
+                                                + "(admin@example.com) on 2024-01-16T10:30:00Z\n"
+                                                + "Rejected by Admin User (admin@example.com), reason: Oops on "
+                                                + "2024-01-17T10:30:00Z")
+                                .build();
+                context.restoreAuthSystemState();
+
+                String token = getAuthToken(admin.getEmail(), password);
+
+                getClient(token).perform(get("/api/reports/users-activities/actions")
+                                .param("userEmail", "ADMIN@EXAMPLE")
+                                .param("userName", "admin")
+                                .param("actionType", "rej")
+                                .param("itemId", "-")
+                                .param("page", "0")
+                                .param("size", "1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.totalElements", Matchers.is(1)))
+                                .andExpect(jsonPath("$.totalPages", Matchers.is(1)))
+                                .andExpect(jsonPath("$.currentPage", Matchers.is(0)))
+                                .andExpect(jsonPath("$.pageSize", Matchers.is(1)))
+                                .andExpect(jsonPath("$.content", Matchers.hasSize(1)))
+                                .andExpect(jsonPath("$.content[0].actionType", Matchers.is("REJECTED")))
+                                .andExpect(jsonPath("$.content[0].email", Matchers.is("admin@example.com")));
+
+                getClient(token).perform(get("/api/reports/users-activities/actions")
+                                .param("size", "1")
+                                .param("page", "1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.totalElements", Matchers.is(3)))
+                                .andExpect(jsonPath("$.totalPages", Matchers.is(3)))
+                                .andExpect(jsonPath("$.currentPage", Matchers.is(1)))
+                                .andExpect(jsonPath("$.pageSize", Matchers.is(1)))
+                                .andExpect(jsonPath("$.content", Matchers.hasSize(1)));
         }
 
         @Test

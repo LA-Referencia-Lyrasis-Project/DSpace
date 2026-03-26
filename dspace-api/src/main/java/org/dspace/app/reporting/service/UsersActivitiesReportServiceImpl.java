@@ -9,12 +9,15 @@ package org.dspace.app.reporting.service;
 
 import java.sql.SQLException;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.logging.log4j.Logger;
+import org.dspace.app.reporting.model.PaginatedUserActionsResponse;
 import org.dspace.app.reporting.model.SummaryWithTrendData;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
@@ -38,6 +41,53 @@ public class UsersActivitiesReportServiceImpl implements UsersActivitiesReportSe
     @Override
     public List<UserAction> getAllActions(Context context) throws SQLException {
         return usersActivitiesActionsCacheService.getAllActions(context);
+    }
+
+    @Override
+    public PaginatedUserActionsResponse getActions(Context context, int page, int size, String itemId,
+            String actionType, String userEmail, String userName)
+            throws SQLException {
+        try {
+            List<UserAction> allActions = usersActivitiesActionsCacheService.getAllActions(context);
+
+            int normalizedPage = Math.max(page, 0);
+            int normalizedSize = size > 0 ? size : 100;
+            long offset = (long) normalizedPage * normalizedSize;
+            long upperExclusive = offset + normalizedSize;
+
+            String normalizedItemId = normalizeFilter(itemId);
+            String normalizedActionType = normalizeFilter(actionType);
+            String normalizedUserEmail = normalizeFilter(userEmail);
+            String normalizedUserName = normalizeFilter(userName);
+
+            long totalFilteredElements = 0;
+            List<UserAction> pageContent = new ArrayList<>();
+
+            for (UserAction action : allActions) {
+                if (!matchesFilters(action, normalizedItemId, normalizedActionType,
+                        normalizedUserEmail, normalizedUserName)) {
+                    continue;
+                }
+
+                if (totalFilteredElements >= offset && totalFilteredElements < upperExclusive) {
+                    pageContent.add(action);
+                }
+                totalFilteredElements++;
+            }
+
+            int totalPages = totalFilteredElements == 0 ? 0
+                    : (int) Math.ceil((double) totalFilteredElements / normalizedSize);
+
+            return new PaginatedUserActionsResponse(
+                    pageContent,
+                    totalFilteredElements,
+                    totalPages,
+                    normalizedPage,
+                    normalizedSize);
+        } catch (Exception e) {
+            log.error("Error retrieving paginated actions", e);
+            throw new SQLException("Error retrieving paginated actions", e);
+        }
     }
 
     @Override
@@ -202,5 +252,34 @@ public class UsersActivitiesReportServiceImpl implements UsersActivitiesReportSe
             log.error("Error generating total statistics with trends: " + e.getMessage(), e);
             throw new SQLException("Error generating total statistics with trends", e);
         }
+    }
+
+    private boolean matchesFilters(UserAction action, String itemId, String actionType,
+            String userEmail, String userName) {
+        return containsIgnoreCase(action.getItemId(), itemId)
+                && containsIgnoreCase(action.getActionType(), actionType)
+                && containsIgnoreCase(action.getEmail(), userEmail)
+                && containsIgnoreCase(action.getUserName(), userName);
+    }
+
+    private String normalizeFilter(String filter) {
+        if (filter == null) {
+            return null;
+        }
+        String trimmed = filter.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.toLowerCase(Locale.ROOT);
+    }
+
+    private boolean containsIgnoreCase(String actualValue, String normalizedFilter) {
+        if (normalizedFilter == null) {
+            return true;
+        }
+        if (actualValue == null) {
+            return false;
+        }
+        return actualValue.toLowerCase(Locale.ROOT).contains(normalizedFilter);
     }
 }

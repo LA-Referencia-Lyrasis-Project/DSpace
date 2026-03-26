@@ -65,7 +65,8 @@ public class UsersActivitiesActionsCacheService {
             }
 
             // Get all provenance metadata values
-            List<MetadataValue> provenanceValues = metadataValueService.findByField(context, provenanceField);
+            List<MetadataValue> provenanceValues = metadataValueService
+                    .findByFieldWithDSpaceObject(context, provenanceField);
 
             for (MetadataValue metadataValue : provenanceValues) {
                 String provenanceText = metadataValue.getValue();
@@ -77,9 +78,12 @@ public class UsersActivitiesActionsCacheService {
                     if (metadataValue.getDSpaceObject() instanceof Item) {
                         Item item = (Item) metadataValue.getDSpaceObject();
                         String itemUUID = item.getID().toString();
+                        String itemTitle = item.getName();
 
                         for (UserAction action : actions) {
                             action.setItemUUID(itemUUID);
+                            action.setItemId(itemUUID);
+                            action.setItemTitle(itemTitle);
                         }
                     }
 

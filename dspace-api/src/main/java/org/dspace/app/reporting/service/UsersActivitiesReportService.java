@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
+import org.dspace.app.reporting.model.PaginatedUserActionsResponse;
 import org.dspace.app.reporting.model.SummaryWithTrendData;
 import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
@@ -29,6 +30,23 @@ public interface UsersActivitiesReportService {
      * @throws SQLException if database error occurs
      */
     List<UserAction> getAllActions(Context context) throws SQLException;
+
+    /**
+     * Get actions with optional filters and pagination.
+     *
+     * @param context    the DSpace context
+     * @param page       page number (0-based)
+     * @param size       page size
+     * @param itemId     optional item id filter
+     * @param actionType optional action type filter
+     * @param userEmail  optional user email filter
+     * @param userName   optional user name filter
+     * @return paginated and filtered actions response
+     * @throws SQLException if database error occurs
+     */
+    PaginatedUserActionsResponse getActions(Context context, int page, int size, String itemId,
+            String actionType, String userEmail, String userName)
+            throws SQLException;
 
     /**
      * Get aggregated statistics per user (submissions and reviews)

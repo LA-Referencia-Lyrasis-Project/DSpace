@@ -13,8 +13,8 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.Logger;
+import org.dspace.app.reporting.model.PaginatedUserActionsResponse;
 import org.dspace.app.reporting.model.SummaryWithTrendData;
-import org.dspace.app.reporting.model.UserAction;
 import org.dspace.app.reporting.model.UserActivityStats;
 import org.dspace.app.reporting.service.UsersActivitiesReportService;
 import org.dspace.app.rest.utils.ContextUtil;
@@ -25,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -94,18 +95,38 @@ public class UsersActivitiesReportController {
     }
 
     /**
-     * Get all actions (submissions and reviews) without aggregation
+     * Get all actions (submissions and reviews) with optional filtering and
+     * pagination.
      *
-     * @param request HTTP request
-     * @return list of all user actions
+     * @param request    HTTP request
+     * @param page       page number (0-based), default 0
+     * @param size       page size, default 100
+     * @param itemId     optional item id filter
+     * @param actionType optional action type filter
+     * @param userEmail  optional user email filter
+     * @param userName   optional user name filter
+     * @return paginated response with actions and page metadata
      */
     @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping("/actions")
-    public ResponseEntity<?> getAllActions(HttpServletRequest request) {
+    public ResponseEntity<?> getAllActions(HttpServletRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            @RequestParam(required = false) String itemId,
+            @RequestParam(required = false) String actionType,
+            @RequestParam(required = false) String userEmail,
+            @RequestParam(required = false) String userName) {
         try {
             Context context = ContextUtil.obtainContext(request);
 
-            List<UserAction> actions = usersActivitiesReportService.getAllActions(context);
+            PaginatedUserActionsResponse actions = usersActivitiesReportService.getActions(
+                    context,
+                    page,
+                    size,
+                    itemId,
+                    actionType,
+                    userEmail,
+                    userName);
 
             context.complete();
             return new ResponseEntity<>(actions, HttpStatus.OK);

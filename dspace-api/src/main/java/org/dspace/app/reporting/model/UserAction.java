@@ -48,6 +48,18 @@ public class UserAction {
     private String itemUUID;
 
     /**
+     * Item identifier (same value as itemUUID for compatibility)
+     */
+    @JsonProperty("itemId")
+    private String itemId;
+
+    /**
+     * Item title
+     */
+    @JsonProperty("itemTitle")
+    private String itemTitle;
+
+    /**
      * Additional details (e.g., "Approved for entry into archive")
      */
     @JsonProperty("details")
@@ -62,6 +74,7 @@ public class UserAction {
         this.email = email;
         this.actionDate = actionDate;
         this.itemUUID = itemUUID;
+        this.itemId = itemUUID;
     }
 
     // Getters and Setters
@@ -103,6 +116,23 @@ public class UserAction {
 
     public void setItemUUID(String itemUUID) {
         this.itemUUID = itemUUID;
+        this.itemId = itemUUID;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
+
+    public void setItemId(String itemId) {
+        this.itemId = itemId;
+    }
+
+    public String getItemTitle() {
+        return itemTitle;
+    }
+
+    public void setItemTitle(String itemTitle) {
+        this.itemTitle = itemTitle;
     }
 
     public String getDetails() {
@@ -121,6 +151,8 @@ public class UserAction {
                 ", email='" + email + '\'' +
                 ", actionDate=" + actionDate +
                 ", itemUUID='" + itemUUID + '\'' +
+                ", itemId='" + itemId + '\'' +
+                ", itemTitle='" + itemTitle + '\'' +
                 ", details='" + details + '\'' +
                 '}';
     }
