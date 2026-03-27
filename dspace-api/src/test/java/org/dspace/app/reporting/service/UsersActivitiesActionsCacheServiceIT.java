@@ -78,10 +78,11 @@ public class UsersActivitiesActionsCacheServiceIT extends AbstractIntegrationTes
                 List<UserAction> actions = usersActivitiesActionsCacheService.getAllActions(context);
 
                 assertThat(actions, hasSize(2));
-                assertThat(actions.get(0).getEmail(), is("user1@example.com"));
-                assertThat(actions.get(0).getActionType(), is("SUBMITTED"));
-                assertThat(actions.get(1).getEmail(), is("admin@example.com"));
-                assertThat(actions.get(1).getActionType(), is("APPROVED"));
+                assertThat(actions.get(0).getEmail(), is("admin@example.com"));
+                assertThat(actions.get(0).getActionType(), is("APPROVED"));
+                assertThat(actions.get(1).getEmail(), is("user1@example.com"));
+                assertThat(actions.get(1).getActionType(), is("SUBMITTED"));
                 assertThat(actions.get(0).getItemUUID(), is(item.getID().toString()));
+                assertThat(actions.get(1).getItemUUID(), is(item.getID().toString()));
         }
 }

@@ -91,6 +91,19 @@ public class UsersActivitiesActionsCacheService {
                 }
             }
 
+            allActions.sort((firstAction, secondAction) -> {
+                if (firstAction.getActionDate() == null && secondAction.getActionDate() == null) {
+                    return 0;
+                }
+                if (firstAction.getActionDate() == null) {
+                    return 1;
+                }
+                if (secondAction.getActionDate() == null) {
+                    return -1;
+                }
+                return secondAction.getActionDate().compareTo(firstAction.getActionDate());
+            });
+
             log.info("Extracted " + allActions.size() + " total actions from provenance metadata");
 
         } catch (Exception e) {
