@@ -20,7 +20,8 @@ import org.dspace.core.Context;
 
 /**
  * Service interface class for the MetadataValue object.
- * The implementation of this class is responsible for all business logic calls for the MetadataValue object and is
+ * The implementation of this class is responsible for all business logic calls
+ * for the MetadataValue object and is
  * autowired by spring
  *
  * @author kevinvandevelde at atmire.com
@@ -48,8 +49,7 @@ public interface MetadataValueService {
      * @throws SQLException if database error
      */
     public MetadataValue find(Context context, int valueId)
-        throws IOException, SQLException;
-
+            throws IOException, SQLException;
 
     /**
      * Retrieves the metadata values for a given field from the database.
@@ -61,14 +61,27 @@ public interface MetadataValueService {
      * @throws SQLException if database error
      */
     public List<MetadataValue> findByField(Context context, MetadataField metadataField)
-        throws IOException, SQLException;
+            throws IOException, SQLException;
+
+    /**
+     * Retrieves metadata values for a given field with linked DSpaceObject
+     * eagerly fetched.
+     *
+     * @param context       dspace context
+     * @param metadataField metadata field whose values to look for
+     * @return metadata values with linked DSpaceObject initialized
+     * @throws IOException  if IO error
+     * @throws SQLException if database error
+     */
+    public List<MetadataValue> findByFieldWithDSpaceObject(Context context, MetadataField metadataField)
+            throws IOException, SQLException;
 
     /**
      * Retrieves matching MetadataValues for a given field and value.
      *
-     * @param context dspace context
+     * @param context       dspace context
      * @param metadataField The field that must match
-     * @param value The value that must match
+     * @param value         The value that must match
      * @return the matching MetadataValues
      * @throws SQLException if database error
      */
@@ -85,7 +98,7 @@ public interface MetadataValueService {
     public void update(Context context, MetadataValue metadataValue) throws SQLException;
 
     public void update(Context context, MetadataValue metadataValue, boolean modifyParentObject)
-        throws SQLException, AuthorizeException;
+            throws SQLException, AuthorizeException;
 
     /**
      * Delete the metadata field.
@@ -109,7 +122,8 @@ public interface MetadataValueService {
      * @throws SQLException if database error
      */
     public MetadataValue getMinimum(Context context, int metadataFieldId)
-        throws SQLException;
+            throws SQLException;
+
 
     int countTotal(Context context) throws SQLException;
 }

@@ -24,8 +24,10 @@ import org.dspace.core.AbstractHibernateDAO;
 import org.dspace.core.Context;
 
 /**
- * Hibernate implementation of the Database Access Object interface class for the MetadataValue object.
- * This class is responsible for all database calls for the MetadataValue object and is autowired by spring
+ * Hibernate implementation of the Database Access Object interface class for
+ * the MetadataValue object.
+ * This class is responsible for all database calls for the MetadataValue object
+ * and is autowired by spring
  * This class should never be accessed directly.
  *
  * @author kevinvandevelde at atmire.com
@@ -35,11 +37,10 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
         super();
     }
 
-
     @Override
     public List<MetadataValue> findByField(Context context, MetadataField metadataField) throws SQLException {
         CriteriaBuilder criteriaBuilder = getCriteriaBuilder(context);
-        CriteriaQuery criteriaQuery = getCriteriaQuery(criteriaBuilder, MetadataValue.class);
+        CriteriaQuery<MetadataValue> criteriaQuery = getCriteriaQuery(criteriaBuilder, MetadataValue.class);
         Root<MetadataValue> metadataValueRoot = criteriaQuery.from(MetadataValue.class);
         Join<MetadataValue, MetadataField> join = metadataValueRoot.join("metadataField");
         criteriaQuery.select(metadataValueRoot);
@@ -49,8 +50,23 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
     }
 
     @Override
+    public List<MetadataValue> findByFieldWithDSpaceObject(Context context, MetadataField metadataField)
+            throws SQLException {
+        String queryString = "SELECT m FROM MetadataValue m "
+                + "JOIN FETCH m.dSpaceObject dso "
+                + "JOIN m.metadataField mf "
+                + "JOIN Item i ON m.dSpaceObject = i "
+                + "WHERE mf.id = :metadata_field_id";
+        Query query = createQuery(context, queryString);
+        query.setParameter("metadata_field_id", metadataField.getID());
+        @SuppressWarnings("unchecked")
+        List<MetadataValue> results = query.getResultList();
+        return results;
+    }
+
+    @Override
     public Iterator<MetadataValue> findItemValuesByFieldAndValue(Context context,
-                                                                 MetadataField metadataField, String value)
+            MetadataField metadataField, String value)
             throws SQLException {
         String queryString = "SELECT m from MetadataValue m " +
                 "join Item i on m.dSpaceObject = i where m.metadataField.id = :metadata_field_id " +
@@ -64,7 +80,7 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
     @Override
     public Iterator<MetadataValue> findByValueLike(Context context, String value) throws SQLException {
         String queryString = "SELECT m FROM MetadataValue m JOIN m.metadataField f " +
-            "WHERE m.value like concat('%', concat(:searchString,'%')) ORDER BY m.id ASC";
+                "WHERE m.value like concat('%', concat(:searchString,'%')) ORDER BY m.id ASC";
 
         Query query = createQuery(context, queryString);
         query.setParameter("searchString", value);
@@ -82,9 +98,9 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
 
     @Override
     public MetadataValue getMinimum(Context context, int metadataFieldId)
-        throws SQLException {
+            throws SQLException {
         String queryString = "SELECT m FROM MetadataValue m JOIN FETCH m.metadataField WHERE m.metadataField.id = " +
-            ":metadata_field_id ORDER BY value";
+                ":metadata_field_id ORDER BY value";
         Query query = createQuery(context, queryString);
         query.setParameter("metadata_field_id", metadataFieldId);
         query.setMaxResults(1);
