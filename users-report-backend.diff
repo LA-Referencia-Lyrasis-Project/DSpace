@@ -1,0 +1,2603 @@
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/model/PaginatedUserActionsResponse.java b/dspace-api/src/main/java/org/dspace/app/reporting/model/PaginatedUserActionsResponse.java
+new file mode 100644
+index 0000000000..a0353710a2
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/model/PaginatedUserActionsResponse.java
+@@ -0,0 +1,85 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.model;
++
++import java.util.List;
++
++import com.fasterxml.jackson.annotation.JsonProperty;
++
++/**
++ * Paginated response wrapper for user actions.
++ */
++public class PaginatedUserActionsResponse {
++
++    @JsonProperty("content")
++    private List<UserAction> content;
++
++    @JsonProperty("totalElements")
++    private long totalElements;
++
++    @JsonProperty("totalPages")
++    private int totalPages;
++
++    @JsonProperty("currentPage")
++    private int currentPage;
++
++    @JsonProperty("pageSize")
++    private int pageSize;
++
++    public PaginatedUserActionsResponse() {
++    }
++
++    public PaginatedUserActionsResponse(List<UserAction> content, long totalElements, int totalPages,
++                                        int currentPage, int pageSize) {
++        this.content = content;
++        this.totalElements = totalElements;
++        this.totalPages = totalPages;
++        this.currentPage = currentPage;
++        this.pageSize = pageSize;
++    }
++
++    public List<UserAction> getContent() {
++        return content;
++    }
++
++    public void setContent(List<UserAction> content) {
++        this.content = content;
++    }
++
++    public long getTotalElements() {
++        return totalElements;
++    }
++
++    public void setTotalElements(long totalElements) {
++        this.totalElements = totalElements;
++    }
++
++    public int getTotalPages() {
++        return totalPages;
++    }
++
++    public void setTotalPages(int totalPages) {
++        this.totalPages = totalPages;
++    }
++
++    public int getCurrentPage() {
++        return currentPage;
++    }
++
++    public void setCurrentPage(int currentPage) {
++        this.currentPage = currentPage;
++    }
++
++    public int getPageSize() {
++        return pageSize;
++    }
++
++    public void setPageSize(int pageSize) {
++        this.pageSize = pageSize;
++    }
++}
+\ No newline at end of file
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/model/SummaryWithTrendData.java b/dspace-api/src/main/java/org/dspace/app/reporting/model/SummaryWithTrendData.java
+new file mode 100644
+index 0000000000..f7fd7366b5
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/model/SummaryWithTrendData.java
+@@ -0,0 +1,158 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.model;
++
++import java.util.HashMap;
++import java.util.Map;
++
++import com.fasterxml.jackson.annotation.JsonProperty;
++
++/**
++ * Summary data with trend information aggregated by month.
++ * Contains total counts and monthly breakdown of actions.
++ */
++public class SummaryWithTrendData {
++    /**
++     * Total number of submissions
++     */
++    @JsonProperty("submissions")
++    private Integer submissions;
++
++    /**
++     * Total number of reviews (approvals + rejections + withdrawals)
++     */
++    @JsonProperty("reviews")
++    private Integer reviews;
++
++    /**
++     * Total number of approvals
++     */
++    @JsonProperty("approvals")
++    private Integer approvals;
++
++    /**
++     * Total number of rejections
++     */
++    @JsonProperty("rejections")
++    private Integer rejections;
++
++    /**
++     * Total number of withdrawals
++     */
++    @JsonProperty("withdrawals")
++    private Integer withdrawals;
++
++    /**
++     * Total number of unique users
++     */
++    @JsonProperty("totalUsers")
++    private Integer totalUsers;
++
++    /**
++     * Trend data aggregated by month (YYYY-MM format)
++     * Each month maps to action type counts
++     * Example: {"2025-01": {"SUBMITTED": 5, "APPROVED": 3, "REJECTED": 1,
++     * "WITHDRAWN": 0}, ...}
++     */
++    @JsonProperty("trendData")
++    private Map<String, Map<String, Integer>> trendData;
++
++    public SummaryWithTrendData() {
++        this.trendData = new HashMap<>();
++    }
++
++    public SummaryWithTrendData(Integer submissions, Integer reviews, Integer approvals,
++            Integer rejections, Integer withdrawals, Integer totalUsers) {
++        this();
++        this.submissions = submissions;
++        this.reviews = reviews;
++        this.approvals = approvals;
++        this.rejections = rejections;
++        this.withdrawals = withdrawals;
++        this.totalUsers = totalUsers;
++    }
++
++    // Getters and Setters
++    public Integer getSubmissions() {
++        return submissions;
++    }
++
++    public void setSubmissions(Integer submissions) {
++        this.submissions = submissions;
++    }
++
++    public Integer getReviews() {
++        return reviews;
++    }
++
++    public void setReviews(Integer reviews) {
++        this.reviews = reviews;
++    }
++
++    public Integer getApprovals() {
++        return approvals;
++    }
++
++    public void setApprovals(Integer approvals) {
++        this.approvals = approvals;
++    }
++
++    public Integer getRejections() {
++        return rejections;
++    }
++
++    public void setRejections(Integer rejections) {
++        this.rejections = rejections;
++    }
++
++    public Integer getWithdrawals() {
++        return withdrawals;
++    }
++
++    public void setWithdrawals(Integer withdrawals) {
++        this.withdrawals = withdrawals;
++    }
++
++    public Integer getTotalUsers() {
++        return totalUsers;
++    }
++
++    public void setTotalUsers(Integer totalUsers) {
++        this.totalUsers = totalUsers;
++    }
++
++    public Map<String, Map<String, Integer>> getTrendData() {
++        return trendData;
++    }
++
++    public void setTrendData(Map<String, Map<String, Integer>> trendData) {
++        this.trendData = trendData;
++    }
++
++    /**
++     * Add trend data for a specific month and action type
++     *
++     * @param month      the month in YYYY-MM format
++     * @param actionType the action type (SUBMITTED, APPROVED, etc.)
++     * @param count      the count to add
++     */
++    public void addTrendData(String month, String actionType, Integer count) {
++        Map<String, Integer> monthData = trendData.computeIfAbsent(month, k -> new HashMap<>());
++        monthData.put(actionType, count);
++    }
++
++    /**
++     * Get trend data for a specific month
++     *
++     * @param month the month in YYYY-MM format
++     * @return map of action type to count, or empty map if month not found
++     */
++    public Map<String, Integer> getTrendDataForMonth(String month) {
++        return trendData.getOrDefault(month, new HashMap<>());
++    }
++}
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/model/UserAction.java b/dspace-api/src/main/java/org/dspace/app/reporting/model/UserAction.java
+new file mode 100644
+index 0000000000..e8dbdf5233
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/model/UserAction.java
+@@ -0,0 +1,159 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.model;
++
++import java.time.ZonedDateTime;
++
++import com.fasterxml.jackson.annotation.JsonFormat;
++import com.fasterxml.jackson.annotation.JsonProperty;
++
++/**
++ * Represents an action (submission or review) by a user.
++ */
++public class UserAction {
++    /**
++     * Type of action: "SUBMITTED" or "REVIEWED"
++     */
++    @JsonProperty("actionType")
++    private String actionType;
++
++    /**
++     * Full name of the user
++     */
++    @JsonProperty("userName")
++    private String userName;
++
++    /**
++     * Email address of the user
++     */
++    @JsonProperty("email")
++    private String email;
++
++    /**
++     * Date and time when the action was performed
++     */
++    @JsonProperty("actionDate")
++    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssZ")
++    private ZonedDateTime actionDate;
++
++    /**
++     * Item UUID that was submitted or reviewed
++     */
++    @JsonProperty("itemUUID")
++    private String itemUUID;
++
++    /**
++     * Item identifier (same value as itemUUID for compatibility)
++     */
++    @JsonProperty("itemId")
++    private String itemId;
++
++    /**
++     * Item title
++     */
++    @JsonProperty("itemTitle")
++    private String itemTitle;
++
++    /**
++     * Additional details (e.g., "Approved for entry into archive")
++     */
++    @JsonProperty("details")
++    private String details;
++
++    public UserAction() {
++    }
++
++    public UserAction(String actionType, String userName, String email, ZonedDateTime actionDate, String itemUUID) {
++        this.actionType = actionType;
++        this.userName = userName;
++        this.email = email;
++        this.actionDate = actionDate;
++        this.itemUUID = itemUUID;
++        this.itemId = itemUUID;
++    }
++
++    // Getters and Setters
++    public String getActionType() {
++        return actionType;
++    }
++
++    public void setActionType(String actionType) {
++        this.actionType = actionType;
++    }
++
++    public String getUserName() {
++        return userName;
++    }
++
++    public void setUserName(String userName) {
++        this.userName = userName;
++    }
++
++    public String getEmail() {
++        return email;
++    }
++
++    public void setEmail(String email) {
++        this.email = email;
++    }
++
++    public ZonedDateTime getActionDate() {
++        return actionDate;
++    }
++
++    public void setActionDate(ZonedDateTime actionDate) {
++        this.actionDate = actionDate;
++    }
++
++    public String getItemUUID() {
++        return itemUUID;
++    }
++
++    public void setItemUUID(String itemUUID) {
++        this.itemUUID = itemUUID;
++        this.itemId = itemUUID;
++    }
++
++    public String getItemId() {
++        return itemId;
++    }
++
++    public void setItemId(String itemId) {
++        this.itemId = itemId;
++    }
++
++    public String getItemTitle() {
++        return itemTitle;
++    }
++
++    public void setItemTitle(String itemTitle) {
++        this.itemTitle = itemTitle;
++    }
++
++    public String getDetails() {
++        return details;
++    }
++
++    public void setDetails(String details) {
++        this.details = details;
++    }
++
++    @Override
++    public String toString() {
++        return "UserAction{" +
++                "actionType='" + actionType + '\'' +
++                ", userName='" + userName + '\'' +
++                ", email='" + email + '\'' +
++                ", actionDate=" + actionDate +
++                ", itemUUID='" + itemUUID + '\'' +
++                ", itemId='" + itemId + '\'' +
++                ", itemTitle='" + itemTitle + '\'' +
++                ", details='" + details + '\'' +
++                '}';
++    }
++}
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/model/UserActivityStats.java b/dspace-api/src/main/java/org/dspace/app/reporting/model/UserActivityStats.java
+new file mode 100644
+index 0000000000..8fe05cf314
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/model/UserActivityStats.java
+@@ -0,0 +1,155 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.model;
++
++
++import com.fasterxml.jackson.annotation.JsonProperty;
++
++/**
++ * Represents aggregated statistics for a user's activity.
++ */
++public class UserActivityStats {
++    /**
++     * Full name of the user
++     */
++    @JsonProperty("userName")
++    private String userName;
++
++    /**
++     * Email address of the user
++     */
++    @JsonProperty("email")
++    private String email;
++
++    /**
++     * Total number of submissions
++     */
++    @JsonProperty("totalSubmissions")
++    private int totalSubmissions;
++
++    /**
++     * Total number of approvals
++     */
++    @JsonProperty("totalApprovals")
++    private int totalApprovals;
++
++    /**
++     * Total number of reviews
++     */
++    @JsonProperty("totalReviews")
++    private int totalReviews;
++
++    /**
++     * Total number of rejections
++     */
++    @JsonProperty("totalRejections")
++    private int totalRejections;
++
++    /**
++     * Total number of withdrawals
++     */
++    @JsonProperty("totalWithdrawals")
++    private int totalWithdrawals;
++
++
++
++    public UserActivityStats(String userName, String email) {
++        this.userName = userName;
++        this.email = email;
++        this.totalSubmissions = 0;
++        this.totalApprovals = 0;
++        this.totalRejections = 0;
++        this.totalWithdrawals = 0;
++        this.totalReviews = 0;
++    }
++
++    // Getters and Setters
++    public String getUserName() {
++        return userName;
++    }
++
++    public void setUserName(String userName) {
++        this.userName = userName;
++    }
++
++    public String getEmail() {
++        return email;
++    }
++
++    public void setEmail(String email) {
++        this.email = email;
++    }
++
++    public int getTotalSubmissions() {
++        return totalSubmissions;
++    }
++
++    public void setTotalSubmissions(int totalSubmissions) {
++        this.totalSubmissions = totalSubmissions;
++    }
++
++    public int getTotalApprovals() {
++        return totalApprovals;
++    }
++
++    public void setTotalApprovals(int totalApprovals) {
++        this.totalApprovals = totalApprovals;
++    }
++
++    public int getTotalRejections() {
++        return totalRejections;
++    }
++
++    public void setTotalRejections(int totalRejections) {
++        this.totalRejections = totalRejections;
++    }
++
++    public int getTotalWithdrawals() {
++        return totalWithdrawals;
++    }
++
++    public void setTotalWithdrawals(int totalWithdrawals) {
++        this.totalWithdrawals = totalWithdrawals;
++    }
++
++    public int getTotalReviews() {
++        return totalReviews;
++    }
++
++    public void setTotalReviews(int totalReviews) {
++        this.totalReviews = totalReviews;
++    }
++
++    public void countAction(String actionType) {
++        if ("SUBMITTED".equals(actionType)) {
++            this.totalSubmissions++;
++        } else if ("APPROVED".equals(actionType)) {
++            this.totalApprovals++;
++            this.totalReviews++;
++        } else if ("REJECTED".equals(actionType)) {
++            this.totalRejections++;
++            this.totalReviews++;
++        } else if ("WITHDRAWN".equals(actionType)) {
++            this.totalWithdrawals++;
++            this.totalReviews++;
++        }
++    }
++
++    @Override
++    public String toString() {
++        return "UserActivityStats{" +
++                "userName='" + userName + '\'' +
++                ", email='" + email + '\'' +
++                ", totalSubmissions=" + totalSubmissions +
++                ", totalReviews=" + totalReviews +
++                ", totalApprovals=" + totalApprovals +
++                ", totalRejections=" + totalRejections +
++                ", totalWithdrawals=" + totalWithdrawals +
++                '}';
++    }
++}
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesActionsCacheService.java b/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesActionsCacheService.java
+new file mode 100644
+index 0000000000..947fb778e2
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesActionsCacheService.java
+@@ -0,0 +1,116 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.service;
++
++import java.sql.SQLException;
++import java.util.ArrayList;
++import java.util.List;
++
++import org.apache.logging.log4j.Logger;
++import org.dspace.app.reporting.model.UserAction;
++import org.dspace.app.reporting.utils.ProvenanceParser;
++import org.dspace.content.Item;
++import org.dspace.content.MetadataField;
++import org.dspace.content.MetadataValue;
++import org.dspace.content.service.MetadataFieldService;
++import org.dspace.content.service.MetadataValueService;
++import org.dspace.core.Context;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.cache.annotation.Cacheable;
++import org.springframework.stereotype.Service;
++
++/**
++ * Cached access to all provenance-based user actions.
++ */
++@Service
++public class UsersActivitiesActionsCacheService {
++
++    private static final Logger log = org.apache.logging.log4j.LogManager
++            .getLogger(UsersActivitiesActionsCacheService.class);
++
++    @Autowired
++    private MetadataFieldService metadataFieldService;
++
++    @Autowired
++    private MetadataValueService metadataValueService;
++
++    /**
++     * Get all actions (submissions and reviews) from provenance metadata.
++     * Cached for 1 hour via Ehcache configuration.
++     *
++     * @param context the DSpace context
++     * @return list of all user actions extracted from provenance metadata
++     * @throws SQLException if database error occurs
++     */
++    @Cacheable(cacheNames = "usersActivities.allActions", key = "'all'")
++    public List<UserAction> getAllActions(Context context) throws SQLException {
++        List<UserAction> allActions = new ArrayList<>();
++
++        try {
++            // Find the provenance metadata field (dc.description.provenance)
++            MetadataField provenanceField = metadataFieldService.findByElement(
++                    context,
++                    "dc",
++                    "description",
++                    "provenance");
++
++            if (provenanceField == null) {
++                log.warn("Provenance metadata field (dc.description.provenance) not found");
++                return allActions;
++            }
++
++            // Get all provenance metadata values
++            List<MetadataValue> provenanceValues = metadataValueService
++                    .findByFieldWithDSpaceObject(context, provenanceField);
++
++            for (MetadataValue metadataValue : provenanceValues) {
++                String provenanceText = metadataValue.getValue();
++
++                if (provenanceText != null && !provenanceText.isEmpty()) {
++                    List<UserAction> actions = ProvenanceParser.parseProvenanceText(provenanceText);
++
++                    // Add item UUID to each action
++                    if (metadataValue.getDSpaceObject() instanceof Item) {
++                        Item item = (Item) metadataValue.getDSpaceObject();
++                        String itemUUID = item.getID().toString();
++                        String itemTitle = item.getName();
++
++                        for (UserAction action : actions) {
++                            action.setItemUUID(itemUUID);
++                            action.setItemId(itemUUID);
++                            action.setItemTitle(itemTitle);
++                        }
++                    }
++
++                    allActions.addAll(actions);
++                }
++            }
++
++            allActions.sort((firstAction, secondAction) -> {
++                if (firstAction.getActionDate() == null && secondAction.getActionDate() == null) {
++                    return 0;
++                }
++                if (firstAction.getActionDate() == null) {
++                    return 1;
++                }
++                if (secondAction.getActionDate() == null) {
++                    return -1;
++                }
++                return secondAction.getActionDate().compareTo(firstAction.getActionDate());
++            });
++
++            log.info("Extracted " + allActions.size() + " total actions from provenance metadata");
++
++        } catch (Exception e) {
++            log.error("Error retrieving provenance metadata: " + e.getMessage(), e);
++            throw new SQLException("Error retrieving provenance metadata", e);
++        }
++
++        return allActions;
++    }
++}
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesReportService.java b/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesReportService.java
+new file mode 100644
+index 0000000000..e4da02236a
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesReportService.java
+@@ -0,0 +1,77 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.service;
++
++import java.sql.SQLException;
++import java.util.List;
++import java.util.Map;
++
++import org.dspace.app.reporting.model.PaginatedUserActionsResponse;
++import org.dspace.app.reporting.model.SummaryWithTrendData;
++import org.dspace.app.reporting.model.UserAction;
++import org.dspace.app.reporting.model.UserActivityStats;
++import org.dspace.core.Context;
++
++/**
++ * Service for generating user activity reports.
++ */
++public interface UsersActivitiesReportService {
++
++    /**
++     * Get all actions (submissions and reviews) from provenance metadata.
++     *
++     * @param context the DSpace context
++     * @return list of all user actions extracted from provenance metadata
++     * @throws SQLException if database error occurs
++     */
++    List<UserAction> getAllActions(Context context) throws SQLException;
++
++    /**
++     * Get actions with optional filters and pagination.
++     *
++     * @param context    the DSpace context
++     * @param page       page number (0-based)
++     * @param size       page size
++     * @param itemId     optional item id filter
++     * @param actionType optional action type filter
++     * @param userEmail  optional user email filter
++     * @param userName   optional user name filter
++     * @return paginated and filtered actions response
++     * @throws SQLException if database error occurs
++     */
++    PaginatedUserActionsResponse getActions(Context context, int page, int size, String itemId,
++            String actionType, String userEmail, String userName)
++            throws SQLException;
++
++    /**
++     * Get aggregated statistics per user (submissions and reviews)
++     *
++     * @param context the DSpace context
++     * @return map of user email to UserActivityStats
++     * @throws SQLException if database error occurs
++     */
++    Map<String, UserActivityStats> getUsersActivitiesStatistics(Context context) throws SQLException;
++
++    /**
++     * Get total submissions and reviews count
++     *
++     * @param context the DSpace context
++     * @return map with keys "submissions" and "reviews" and integer values
++     * @throws SQLException if database error occurs
++     */
++    Map<String, Integer> getTotalStatistics(Context context) throws SQLException;
++
++    /**
++     * Get total statistics with trend data aggregated by month
++     *
++     * @param context the DSpace context
++     * @return SummaryWithTrendData containing totals and monthly trends
++     * @throws SQLException if database error occurs
++     */
++    SummaryWithTrendData getTotalStatisticsWithTrends(Context context) throws SQLException;
++}
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesReportServiceImpl.java b/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesReportServiceImpl.java
+new file mode 100644
+index 0000000000..53dce69fc1
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/service/UsersActivitiesReportServiceImpl.java
+@@ -0,0 +1,285 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.service;
++
++import java.sql.SQLException;
++import java.time.YearMonth;
++import java.util.ArrayList;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Locale;
++import java.util.Map;
++import java.util.TreeMap;
++
++import org.apache.logging.log4j.Logger;
++import org.dspace.app.reporting.model.PaginatedUserActionsResponse;
++import org.dspace.app.reporting.model.SummaryWithTrendData;
++import org.dspace.app.reporting.model.UserAction;
++import org.dspace.app.reporting.model.UserActivityStats;
++import org.dspace.core.Context;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.stereotype.Service;
++
++/**
++ * Service implementation for generating user activity reports
++ * by parsing provenance metadata.
++ */
++@Service
++public class UsersActivitiesReportServiceImpl implements UsersActivitiesReportService {
++
++    private static final Logger log = org.apache.logging.log4j.LogManager
++            .getLogger(UsersActivitiesReportServiceImpl.class);
++
++    @Autowired
++    private UsersActivitiesActionsCacheService usersActivitiesActionsCacheService;
++
++    @Override
++    public List<UserAction> getAllActions(Context context) throws SQLException {
++        return usersActivitiesActionsCacheService.getAllActions(context);
++    }
++
++    @Override
++    public PaginatedUserActionsResponse getActions(Context context, int page, int size, String itemId,
++            String actionType, String userEmail, String userName)
++            throws SQLException {
++        try {
++            List<UserAction> allActions = usersActivitiesActionsCacheService.getAllActions(context);
++
++            int normalizedPage = Math.max(page, 0);
++            int normalizedSize = size > 0 ? size : 100;
++            long offset = (long) normalizedPage * normalizedSize;
++            long upperExclusive = offset + normalizedSize;
++
++            String normalizedItemId = normalizeFilter(itemId);
++            String normalizedActionType = normalizeFilter(actionType);
++            String normalizedUserEmail = normalizeFilter(userEmail);
++            String normalizedUserName = normalizeFilter(userName);
++
++            long totalFilteredElements = 0;
++            List<UserAction> pageContent = new ArrayList<>();
++
++            for (UserAction action : allActions) {
++                if (!matchesFilters(action, normalizedItemId, normalizedActionType,
++                        normalizedUserEmail, normalizedUserName)) {
++                    continue;
++                }
++
++                if (totalFilteredElements >= offset && totalFilteredElements < upperExclusive) {
++                    pageContent.add(action);
++                }
++                totalFilteredElements++;
++            }
++
++            int totalPages = totalFilteredElements == 0 ? 0
++                    : (int) Math.ceil((double) totalFilteredElements / normalizedSize);
++
++            return new PaginatedUserActionsResponse(
++                    pageContent,
++                    totalFilteredElements,
++                    totalPages,
++                    normalizedPage,
++                    normalizedSize);
++        } catch (Exception e) {
++            log.error("Error retrieving paginated actions", e);
++            throw new SQLException("Error retrieving paginated actions", e);
++        }
++    }
++
++    @Override
++    public Map<String, UserActivityStats> getUsersActivitiesStatistics(Context context) throws SQLException {
++        Map<String, UserActivityStats> stats = new TreeMap<>();
++
++        try {
++            List<UserAction> allActions = usersActivitiesActionsCacheService.getAllActions(context);
++
++            for (UserAction action : allActions) {
++                String email = action.getEmail();
++
++                // Get or create stats for this user
++                UserActivityStats userStats = stats.computeIfAbsent(
++                        email,
++                        k -> new UserActivityStats(action.getUserName(), email));
++
++                // Update user name if we have a new one
++                if (action.getUserName() != null && !action.getUserName().isEmpty()) {
++                    userStats.setUserName(action.getUserName());
++                }
++
++                userStats.countAction(action.getActionType());
++            }
++
++            log.info("Generated statistics for " + stats.size() + " unique users");
++
++        } catch (Exception e) {
++            log.error("Error generating user statistics: " + e.getMessage(), e);
++            throw new SQLException("Error generating user statistics", e);
++        }
++
++        return stats;
++    }
++
++    @Override
++    public Map<String, Integer> getTotalStatistics(Context context) throws SQLException {
++        Map<String, Integer> totals = new HashMap<>();
++
++        try {
++            List<UserAction> allActions = usersActivitiesActionsCacheService.getAllActions(context);
++
++            int submissions = 0;
++            int reviews = 0;
++            int approvals = 0;
++            int rejections = 0;
++            int withdrawals = 0;
++
++            for (UserAction action : allActions) {
++                String actionType = action.getActionType();
++                if ("SUBMITTED".equals(actionType)) {
++                    submissions++;
++                } else if ("APPROVED".equals(actionType)) {
++                    approvals++;
++                    reviews++;
++                } else if ("REJECTED".equals(actionType)) {
++                    rejections++;
++                    reviews++;
++                } else if ("WITHDRAWN".equals(actionType)) {
++                    withdrawals++;
++                    reviews++;
++                }
++            }
++
++            int uniqueUserCount = getUsersCount(allActions);
++
++            totals.put("submissions", submissions);
++            totals.put("reviews", reviews);
++            totals.put("approvals", approvals);
++            totals.put("rejections", rejections);
++            totals.put("withdrawals", withdrawals);
++            totals.put("totalUsers", uniqueUserCount);
++
++            log.info("Total statistics: " + submissions + " submissions, " + reviews + " reviews, "
++                    + approvals + " approvals, " + rejections + " rejections, " + withdrawals
++                    + " withdrawals by " + uniqueUserCount + " users");
++
++        } catch (Exception e) {
++            log.error("Error generating total statistics: " + e.getMessage(), e);
++            throw new SQLException("Error generating total statistics", e);
++        }
++
++        return totals;
++    }
++
++    private static int getUsersCount(List<UserAction> allActions) {
++        return Math.toIntExact(allActions.stream()
++                .map(UserAction::getEmail)
++                .distinct()
++                .count());
++    }
++
++    @Override
++    public SummaryWithTrendData getTotalStatisticsWithTrends(Context context) throws SQLException {
++        try {
++            List<UserAction> allActions = usersActivitiesActionsCacheService.getAllActions(context);
++
++            int submissions = 0;
++            int reviews = 0;
++            int approvals = 0;
++            int rejections = 0;
++            int withdrawals = 0;
++
++            // Trend data: Map of month (YYYY-MM) to action type counts
++            Map<String, Map<String, Integer>> trendData = new TreeMap<>();
++
++            for (UserAction action : allActions) {
++                String actionType = action.getActionType();
++
++                // Count totals
++                if ("SUBMITTED".equals(actionType)) {
++                    submissions++;
++                } else if ("APPROVED".equals(actionType)) {
++                    approvals++;
++                    reviews++;
++                } else if ("REJECTED".equals(actionType)) {
++                    rejections++;
++                    reviews++;
++                } else if ("WITHDRAWN".equals(actionType)) {
++                    withdrawals++;
++                    reviews++;
++                }
++
++                // Aggregate by month
++                if (action.getActionDate() != null) {
++                    YearMonth month = YearMonth.from(action.getActionDate());
++                    String monthKey = month.toString(); // Format: YYYY-MM
++
++                    Map<String, Integer> monthData = trendData.computeIfAbsent(monthKey, k -> new HashMap<>());
++
++                    // Initialize action type counters if not present
++                    monthData.putIfAbsent("SUBMITTED", 0);
++                    monthData.putIfAbsent("APPROVED", 0);
++                    monthData.putIfAbsent("REJECTED", 0);
++                    monthData.putIfAbsent("WITHDRAWN", 0);
++
++                    // Increment the appropriate counter
++                    int currentCount = monthData.get(actionType);
++                    monthData.put(actionType, currentCount + 1);
++                }
++            }
++
++            int uniqueUserCount = getUsersCount(allActions);
++
++            // Create summary with trends
++            SummaryWithTrendData summary = new SummaryWithTrendData(
++                    submissions,
++                    reviews,
++                    approvals,
++                    rejections,
++                    withdrawals,
++                    uniqueUserCount);
++
++            summary.setTrendData(trendData);
++
++            log.info("Generated statistics with trends: " + submissions + " submissions, " + reviews
++                    + " reviews with " + trendData.size() + " months of trend data");
++
++            return summary;
++
++        } catch (Exception e) {
++            log.error("Error generating total statistics with trends: " + e.getMessage(), e);
++            throw new SQLException("Error generating total statistics with trends", e);
++        }
++    }
++
++    private boolean matchesFilters(UserAction action, String itemId, String actionType,
++            String userEmail, String userName) {
++        return containsIgnoreCase(action.getItemId(), itemId)
++                && containsIgnoreCase(action.getActionType(), actionType)
++                && containsIgnoreCase(action.getEmail(), userEmail)
++                && containsIgnoreCase(action.getUserName(), userName);
++    }
++
++    private String normalizeFilter(String filter) {
++        if (filter == null) {
++            return null;
++        }
++        String trimmed = filter.trim();
++        if (trimmed.isEmpty()) {
++            return null;
++        }
++        return trimmed.toLowerCase(Locale.ROOT);
++    }
++
++    private boolean containsIgnoreCase(String actualValue, String normalizedFilter) {
++        if (normalizedFilter == null) {
++            return true;
++        }
++        if (actualValue == null) {
++            return false;
++        }
++        return actualValue.toLowerCase(Locale.ROOT).contains(normalizedFilter);
++    }
++}
+diff --git a/dspace-api/src/main/java/org/dspace/app/reporting/utils/ProvenanceParser.java b/dspace-api/src/main/java/org/dspace/app/reporting/utils/ProvenanceParser.java
+new file mode 100644
+index 0000000000..a0d9982754
+--- /dev/null
++++ b/dspace-api/src/main/java/org/dspace/app/reporting/utils/ProvenanceParser.java
+@@ -0,0 +1,359 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.utils;
++
++import java.time.ZonedDateTime;
++import java.time.format.DateTimeFormatter;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.regex.Matcher;
++import java.util.regex.Pattern;
++
++import org.apache.commons.lang3.StringUtils;
++import org.apache.logging.log4j.Logger;
++import org.dspace.app.reporting.model.UserAction;
++
++/**
++ * Utility class to parse provenance metadata and extract user actions.
++ */
++public class ProvenanceParser {
++    private static final Logger log = org.apache.logging.log4j.LogManager.getLogger(ProvenanceParser.class);
++
++    private ProvenanceParser() {
++        throw new AssertionError("Utility class should not be instantiated");
++    }
++
++    // Pattern to match "Submitted by Name (email) on Date ..."
++    private static final Pattern SUBMIT_PATTERN = Pattern.compile(
++            "Submitted by\\s+([^(]+?)\\s+\\(([^)]+)\\)\\s+on\\s+([^\\s]+)",
++            Pattern.CASE_INSENSITIVE);
++
++    // Pattern to match "Approved for entry into archive by Name (email) on Date
++    // ..."
++    private static final Pattern APPROVAL_PATTERN = Pattern.compile(
++            "Approved for entry into archive by\\s+([^(]+?)\\s+\\(([^)]+)\\)\\s+on\\s+([^\\s(]+)",
++            Pattern.CASE_INSENSITIVE);
++
++    // Pattern to match "Step: editstep - action:editaction Approved for entry into
++    // archive by Name (email) on Date ..."
++    private static final Pattern EDITSTEP_APPROVAL_PATTERN = Pattern.compile(
++            "Step:\\s+editstep\\s+-\\s+action:editaction\\s+" +
++                    "Approved for entry into archive by\\s+([^(]+?)\\s+\\(([^)]+)\\)\\s+on\\s+([^\\s(]+)",
++            Pattern.CASE_INSENSITIVE);
++
++    // Pattern to match "Step: editstep - action:editaction Rejected by Name
++    // (email), reason: ... on Date ..."
++    private static final Pattern EDITSTEP_REJECTION_PATTERN = Pattern.compile(
++            "Step:\\s+editstep\\s+-\\s+action:editaction\\s+" +
++                    "Rejected by\\s+([^(]+?)\\s+\\(([^)]+)\\),\\s+reason:.*?\\s+on\\s+([^\\s(]+)",
++            Pattern.CASE_INSENSITIVE);
++
++    // Pattern to match "Rejected by Name (email), reason: ... on Date ..."
++    private static final Pattern REJECTION_PATTERN = Pattern.compile(
++            "Rejected by\\s+([^(]+?)\\s+\\(([^)]+)\\),\\s+reason:.*?\\s+on\\s+([^\\s(]+)",
++            Pattern.CASE_INSENSITIVE);
++
++    // Pattern to match "Item withdrawn by Name (email) on Date"
++    private static final Pattern WITHDRAWN_PATTERN = Pattern.compile(
++            "Item withdrawn by\\s+([^(]+?)\\s+\\(([^)]+)\\)\\s+on\\s+([^\\s]+)",
++            Pattern.CASE_INSENSITIVE);
++
++    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_DATE_TIME;
++
++    /**
++     * Parse provenance text and extract user actions
++     *
++     * @param provenanceText the full provenance text value from metadata
++     * @return list of UserAction objects extracted from the text
++     */
++    public static List<UserAction> parseProvenanceText(String provenanceText) {
++        List<UserAction> actions = new ArrayList<>();
++
++        if (StringUtils.isBlank(provenanceText)) {
++            return actions;
++        }
++
++        // Split the text into lines for individual processing
++        String[] lines = provenanceText.split("\n");
++
++        for (String line : lines) {
++            line = line.trim();
++
++            // Try to parse as submission
++            UserAction submitAction = parseSubmissionLine(line);
++            if (submitAction != null) {
++                actions.add(submitAction);
++                continue;
++            }
++
++            // Try to parse as editstep approval (with Step: prefix)
++            UserAction editstepApprovalAction = parseEditstepApprovalLine(line);
++            if (editstepApprovalAction != null) {
++                actions.add(editstepApprovalAction);
++                continue;
++            }
++
++            // Try to parse as editstep rejection (with Step: prefix)
++            UserAction editstepRejectionAction = parseEditstepRejectionLine(line);
++            if (editstepRejectionAction != null) {
++                actions.add(editstepRejectionAction);
++                continue;
++            }
++
++            // Try to parse as regular approval (without Step: prefix)
++            UserAction approvalAction = parseApprovalLine(line);
++            if (approvalAction != null) {
++                actions.add(approvalAction);
++                continue;
++            }
++
++            // Try to parse as regular rejection (without Step: prefix)
++            UserAction rejectionAction = parseRejectionLine(line);
++            if (rejectionAction != null) {
++                actions.add(rejectionAction);
++                continue;
++            }
++
++            // Try to parse as withdrawn
++            UserAction withdrawnAction = parseWithdrawnLine(line);
++            if (withdrawnAction != null) {
++                actions.add(withdrawnAction);
++                continue;
++            }
++        }
++
++        return actions;
++    }
++
++    /**
++     * Parse a submission line
++     * Format: "Submitted by Name (email) on Date ..."
++     */
++    private static UserAction parseSubmissionLine(String line) {
++        Matcher matcher = SUBMIT_PATTERN.matcher(line);
++        if (matcher.find()) {
++            String userName = matcher.group(1).trim();
++            String email = matcher.group(2).trim();
++            String dateStr = matcher.group(3).trim();
++
++            try {
++                ZonedDateTime actionDate = parseDate(dateStr);
++                UserAction action = new UserAction();
++                action.setActionType("SUBMITTED");
++                action.setUserName(userName);
++                action.setEmail(email);
++                action.setActionDate(actionDate);
++
++                // Extract details from the line (workflow start info)
++                if (line.contains("workflow start")) {
++                    String details = line.substring(line.indexOf("workflow start"));
++                    action.setDetails(details);
++                }
++
++                return action;
++            } catch (Exception e) {
++                log.debug("Failed to parse submission line: " + line, e);
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Parse an approval/review line (without Step: prefix)
++     * Format: "Approved for entry into archive by Name (email) on Date ..."
++     */
++    private static UserAction parseApprovalLine(String line) {
++        // Skip if it's an editstep line (will be handled by editstep parser)
++        if (line.contains("Step:") && line.contains("action:editaction")) {
++            return null;
++        }
++
++        Matcher matcher = APPROVAL_PATTERN.matcher(line);
++        if (matcher.find()) {
++            String userName = matcher.group(1).trim();
++            String email = matcher.group(2).trim();
++            String dateStr = matcher.group(3).trim();
++
++            try {
++                ZonedDateTime actionDate = parseDate(dateStr);
++                UserAction action = new UserAction();
++                action.setActionType("APPROVED");
++                action.setUserName(userName);
++                action.setEmail(email);
++                action.setActionDate(actionDate);
++                action.setDetails("Approved for entry into archive");
++
++                return action;
++            } catch (Exception e) {
++                log.debug("Failed to parse approval line: " + line, e);
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Parse an editstep approval line (with Step: prefix)
++     * Format: "Step: editstep - action:editaction Approved for entry into archive
++     * by Name (email) on Date ..."
++     */
++    private static UserAction parseEditstepApprovalLine(String line) {
++        Matcher matcher = EDITSTEP_APPROVAL_PATTERN.matcher(line);
++        if (matcher.find()) {
++            String userName = matcher.group(1).trim();
++            String email = matcher.group(2).trim();
++            String dateStr = matcher.group(3).trim();
++
++            try {
++                ZonedDateTime actionDate = parseDate(dateStr);
++                UserAction action = new UserAction();
++                action.setActionType("APPROVED");
++                action.setUserName(userName);
++                action.setEmail(email);
++                action.setActionDate(actionDate);
++                action.setDetails("Approved for entry into archive (editstep)");
++
++                return action;
++            } catch (Exception e) {
++                log.debug("Failed to parse editstep approval line: " + line, e);
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Parse an editstep rejection line (with Step: prefix)
++     * Format: "Step: editstep - action:editaction Rejected by Name (email), reason:
++     * ... on Date ..."
++     */
++    private static UserAction parseEditstepRejectionLine(String line) {
++        Matcher matcher = EDITSTEP_REJECTION_PATTERN.matcher(line);
++        if (matcher.find()) {
++            String userName = matcher.group(1).trim();
++            String email = matcher.group(2).trim();
++            String dateStr = matcher.group(3).trim();
++
++            try {
++                ZonedDateTime actionDate = parseDate(dateStr);
++                UserAction action = new UserAction();
++                action.setActionType("REJECTED");
++                action.setUserName(userName);
++                action.setEmail(email);
++                action.setActionDate(actionDate);
++
++                // Extract reason if available
++                int reasonStart = line.indexOf("reason:");
++                int onIndex = line.indexOf(" on " + dateStr);
++                if (reasonStart != -1 && onIndex != -1) {
++                    String reason = line.substring(reasonStart + 7, onIndex).trim();
++                    action.setDetails("Rejected: " + reason);
++                } else {
++                    action.setDetails("Rejected (editstep)");
++                }
++
++                return action;
++            } catch (Exception e) {
++                log.debug("Failed to parse editstep rejection line: " + line, e);
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Parse a rejection line (without Step: prefix)
++     * Format: "Rejected by Name (email), reason: ... on Date ..."
++     */
++    private static UserAction parseRejectionLine(String line) {
++        // Skip if it's an editstep line (will be handled by editstep parser)
++        if (line.contains("Step:") && line.contains("action:editaction")) {
++            return null;
++        }
++
++        Matcher matcher = REJECTION_PATTERN.matcher(line);
++        if (matcher.find()) {
++            String userName = matcher.group(1).trim();
++            String email = matcher.group(2).trim();
++            String dateStr = matcher.group(3).trim();
++
++            try {
++                ZonedDateTime actionDate = parseDate(dateStr);
++                UserAction action = new UserAction();
++                action.setActionType("REJECTED");
++                action.setUserName(userName);
++                action.setEmail(email);
++                action.setActionDate(actionDate);
++
++                // Extract reason if available
++                int reasonStart = line.indexOf("reason:");
++                int onIndex = line.indexOf(" on " + dateStr);
++                if (reasonStart != -1 && onIndex != -1) {
++                    String reason = line.substring(reasonStart + 7, onIndex).trim();
++                    action.setDetails("Rejected: " + reason);
++                } else {
++                    action.setDetails("Rejected");
++                }
++
++                return action;
++            } catch (Exception e) {
++                log.debug("Failed to parse rejection line: " + line, e);
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Parse a withdrawn line
++     * Format: "Item withdrawn by Name (email) on Date"
++     */
++    private static UserAction parseWithdrawnLine(String line) {
++        Matcher matcher = WITHDRAWN_PATTERN.matcher(line);
++        if (matcher.find()) {
++            String userName = matcher.group(1).trim();
++            String email = matcher.group(2).trim();
++            String dateStr = matcher.group(3).trim();
++
++            try {
++                ZonedDateTime actionDate = parseDate(dateStr);
++                UserAction action = new UserAction();
++                action.setActionType("WITHDRAWN");
++                action.setUserName(userName);
++                action.setEmail(email);
++                action.setActionDate(actionDate);
++                action.setDetails("Item withdrawn");
++
++                return action;
++            } catch (Exception e) {
++                log.debug("Failed to parse withdrawn line: " + line, e);
++            }
++        }
++        return null;
++    }
++
++    /**
++     * Parse ISO 8601 date string
++     */
++    private static ZonedDateTime parseDate(String dateStr) {
++        try {
++            // Try ISO format with Z suffix
++            if (dateStr.endsWith("Z")) {
++                return ZonedDateTime.parse(dateStr, ISO_FORMATTER);
++            }
++
++            // Try with GMT suffix
++            if (dateStr.contains("GMT")) {
++                String cleanDate = dateStr.replace("(GMT)", "").trim();
++                return ZonedDateTime.parse(cleanDate, ISO_FORMATTER);
++            }
++
++            // Try parsing as ISO format
++            return ZonedDateTime.parse(dateStr, ISO_FORMATTER);
++        } catch (Exception e) {
++            log.debug("Failed to parse date: " + dateStr, e);
++            return null;
++        }
++    }
++}
+diff --git a/dspace-api/src/main/java/org/dspace/content/MetadataValueServiceImpl.java b/dspace-api/src/main/java/org/dspace/content/MetadataValueServiceImpl.java
+index 97f0c2ccf4..de5f205b33 100644
+--- a/dspace-api/src/main/java/org/dspace/content/MetadataValueServiceImpl.java
++++ b/dspace-api/src/main/java/org/dspace/content/MetadataValueServiceImpl.java
+@@ -26,7 +26,8 @@ import org.springframework.beans.factory.annotation.Autowired;
+ 
+ /**
+  * Service implementation for the MetadataValue object.
+- * This class is responsible for all business logic calls for the MetadataValue object and is autowired by spring.
++ * This class is responsible for all business logic calls for the MetadataValue
++ * object and is autowired by spring.
+  * This class should never be accessed directly.
+  *
+  * @author kevinvandevelde at atmire.com
+@@ -52,11 +53,12 @@ public class MetadataValueServiceImpl implements MetadataValueService {
+         metadataValue.setMetadataField(metadataField);
+         metadataValue.setDSpaceObject(dso);
+         dso.addMetadata(metadataValue);
+-//An update here isn't needed, this is persisted upon the merge of the owning object
+-//        metadataValueDAO.save(context, metadataValue);
++        // An update here isn't needed, this is persisted upon the merge of the owning
++        // object
++        // metadataValueDAO.save(context, metadataValue);
+         metadataValue = metadataValueDAO.create(context, metadataValue);
+         log.info(LogHelper.getHeader(context, "add_metadatavalue",
+-                                     "metadata_value_id=" + metadataValue.getID()));
++                "metadata_value_id=" + metadataValue.getID()));
+ 
+         return metadataValue;
+     }
+@@ -69,10 +71,16 @@ public class MetadataValueServiceImpl implements MetadataValueService {
+ 
+     @Override
+     public List<MetadataValue> findByField(Context context, MetadataField metadataField)
+-        throws IOException, SQLException {
++            throws IOException, SQLException {
+         return metadataValueDAO.findByField(context, metadataField);
+     }
+ 
++    @Override
++    public List<MetadataValue> findByFieldWithDSpaceObject(Context context, MetadataField metadataField)
++            throws IOException, SQLException {
++        return metadataValueDAO.findByFieldWithDSpaceObject(context, metadataField);
++    }
++
+     @Override
+     public Iterator<MetadataValue> findByFieldAndValue(Context context, MetadataField metadataField, String value)
+             throws SQLException {
+@@ -83,17 +91,17 @@ public class MetadataValueServiceImpl implements MetadataValueService {
+     public void update(Context context, MetadataValue metadataValue) throws SQLException {
+         metadataValueDAO.save(context, metadataValue);
+         log.info(LogHelper.getHeader(context, "update_metadatavalue",
+-                                      "metadata_value_id=" + metadataValue.getID()));
++                "metadata_value_id=" + metadataValue.getID()));
+ 
+     }
+ 
+     @Override
+     public void update(Context context, MetadataValue metadataValue, boolean updateLastModified)
+-        throws SQLException, AuthorizeException {
++            throws SQLException, AuthorizeException {
+         if (updateLastModified) {
+             authorizeService.authorizeAction(context, metadataValue.getDSpaceObject(), Constants.WRITE);
+             DSpaceObjectService<DSpaceObject> dSpaceObjectService = contentServiceFactory
+-                .getDSpaceObjectService(metadataValue.getDSpaceObject());
++                    .getDSpaceObjectService(metadataValue.getDSpaceObject());
+             // get the right class for our dspaceobject not the DSpaceObject lazy proxy
+             DSpaceObject dso = dSpaceObjectService.find(context, metadataValue.getDSpaceObject().getID());
+             dSpaceObjectService.updateLastModified(context, dso);
+@@ -101,11 +109,10 @@ public class MetadataValueServiceImpl implements MetadataValueService {
+         update(context, metadataValue);
+     }
+ 
+-
+     @Override
+     public void delete(Context context, MetadataValue metadataValue) throws SQLException {
+         log.info(LogHelper.getHeader(context, "delete_metadata_value",
+-                                      " metadata_value_id=" + metadataValue.getID()));
++                " metadata_value_id=" + metadataValue.getID()));
+         metadataValueDAO.delete(context, metadataValue);
+     }
+ 
+@@ -121,9 +128,9 @@ public class MetadataValueServiceImpl implements MetadataValueService {
+ 
+     @Override
+     public MetadataValue getMinimum(Context context, int metadataFieldId)
+-        throws SQLException {
++            throws SQLException {
+         return metadataValueDAO.getMinimum(context,
+-                                           metadataFieldId);
++                metadataFieldId);
+     }
+ 
+     @Override
+diff --git a/dspace-api/src/main/java/org/dspace/content/dao/MetadataValueDAO.java b/dspace-api/src/main/java/org/dspace/content/dao/MetadataValueDAO.java
+index 6a09cfdd8e..9b856c3f06 100644
+--- a/dspace-api/src/main/java/org/dspace/content/dao/MetadataValueDAO.java
++++ b/dspace-api/src/main/java/org/dspace/content/dao/MetadataValueDAO.java
+@@ -18,9 +18,11 @@ import org.dspace.core.GenericDAO;
+ 
+ /**
+  * Database Access Object interface class for the MetadataValue object.
+- * The implementation of this class is responsible for all database calls for the MetadataValue object and is
++ * The implementation of this class is responsible for all database calls for
++ * the MetadataValue object and is
+  * autowired by spring
+- * This class should only be accessed from a single service and should never be exposed outside of the API
++ * This class should only be accessed from a single service and should never be
++ * exposed outside of the API
+  *
+  * @author kevinvandevelde at atmire.com
+  */
+@@ -28,8 +30,11 @@ public interface MetadataValueDAO extends GenericDAO<MetadataValue> {
+ 
+     public List<MetadataValue> findByField(Context context, MetadataField fieldId) throws SQLException;
+ 
++    public List<MetadataValue> findByFieldWithDSpaceObject(Context context, MetadataField fieldId)
++            throws SQLException;
++
+     public Iterator<MetadataValue> findItemValuesByFieldAndValue(Context context,
+-                                                                 MetadataField metadataField, String value)
++            MetadataField metadataField, String value)
+             throws SQLException;
+ 
+     public Iterator<MetadataValue> findByValueLike(Context context, String value) throws SQLException;
+@@ -37,7 +42,7 @@ public interface MetadataValueDAO extends GenericDAO<MetadataValue> {
+     public void deleteByMetadataField(Context context, MetadataField metadataField) throws SQLException;
+ 
+     public MetadataValue getMinimum(Context context, int metadataFieldId)
+-        throws SQLException;
++            throws SQLException;
+ 
+     int countRows(Context context) throws SQLException;
+ 
+diff --git a/dspace-api/src/main/java/org/dspace/content/dao/impl/MetadataValueDAOImpl.java b/dspace-api/src/main/java/org/dspace/content/dao/impl/MetadataValueDAOImpl.java
+index dc624c98c6..b66025c402 100644
+--- a/dspace-api/src/main/java/org/dspace/content/dao/impl/MetadataValueDAOImpl.java
++++ b/dspace-api/src/main/java/org/dspace/content/dao/impl/MetadataValueDAOImpl.java
+@@ -24,8 +24,10 @@ import org.dspace.core.AbstractHibernateDAO;
+ import org.dspace.core.Context;
+ 
+ /**
+- * Hibernate implementation of the Database Access Object interface class for the MetadataValue object.
+- * This class is responsible for all database calls for the MetadataValue object and is autowired by spring
++ * Hibernate implementation of the Database Access Object interface class for
++ * the MetadataValue object.
++ * This class is responsible for all database calls for the MetadataValue object
++ * and is autowired by spring
+  * This class should never be accessed directly.
+  *
+  * @author kevinvandevelde at atmire.com
+@@ -35,11 +37,10 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
+         super();
+     }
+ 
+-
+     @Override
+     public List<MetadataValue> findByField(Context context, MetadataField metadataField) throws SQLException {
+         CriteriaBuilder criteriaBuilder = getCriteriaBuilder(context);
+-        CriteriaQuery criteriaQuery = getCriteriaQuery(criteriaBuilder, MetadataValue.class);
++        CriteriaQuery<MetadataValue> criteriaQuery = getCriteriaQuery(criteriaBuilder, MetadataValue.class);
+         Root<MetadataValue> metadataValueRoot = criteriaQuery.from(MetadataValue.class);
+         Join<MetadataValue, MetadataField> join = metadataValueRoot.join("metadataField");
+         criteriaQuery.select(metadataValueRoot);
+@@ -48,9 +49,24 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
+         return list(context, criteriaQuery, false, MetadataValue.class, -1, -1);
+     }
+ 
++    @Override
++    public List<MetadataValue> findByFieldWithDSpaceObject(Context context, MetadataField metadataField)
++            throws SQLException {
++        String queryString = "SELECT m FROM MetadataValue m "
++                + "JOIN FETCH m.dSpaceObject dso "
++                + "JOIN m.metadataField mf "
++                + "JOIN Item i ON m.dSpaceObject = i "
++                + "WHERE mf.id = :metadata_field_id";
++        Query query = createQuery(context, queryString);
++        query.setParameter("metadata_field_id", metadataField.getID());
++        @SuppressWarnings("unchecked")
++        List<MetadataValue> results = query.getResultList();
++        return results;
++    }
++
+     @Override
+     public Iterator<MetadataValue> findItemValuesByFieldAndValue(Context context,
+-                                                                 MetadataField metadataField, String value)
++            MetadataField metadataField, String value)
+             throws SQLException {
+         String queryString = "SELECT m from MetadataValue m " +
+                 "join Item i on m.dSpaceObject = i where m.metadataField.id = :metadata_field_id " +
+@@ -64,7 +80,7 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
+     @Override
+     public Iterator<MetadataValue> findByValueLike(Context context, String value) throws SQLException {
+         String queryString = "SELECT m FROM MetadataValue m JOIN m.metadataField f " +
+-            "WHERE m.value like concat('%', concat(:searchString,'%')) ORDER BY m.id ASC";
++                "WHERE m.value like concat('%', concat(:searchString,'%')) ORDER BY m.id ASC";
+ 
+         Query query = createQuery(context, queryString);
+         query.setParameter("searchString", value);
+@@ -82,9 +98,9 @@ public class MetadataValueDAOImpl extends AbstractHibernateDAO<MetadataValue> im
+ 
+     @Override
+     public MetadataValue getMinimum(Context context, int metadataFieldId)
+-        throws SQLException {
++            throws SQLException {
+         String queryString = "SELECT m FROM MetadataValue m JOIN FETCH m.metadataField WHERE m.metadataField.id = " +
+-            ":metadata_field_id ORDER BY value";
++                ":metadata_field_id ORDER BY value";
+         Query query = createQuery(context, queryString);
+         query.setParameter("metadata_field_id", metadataFieldId);
+         query.setMaxResults(1);
+diff --git a/dspace-api/src/main/java/org/dspace/content/service/MetadataValueService.java b/dspace-api/src/main/java/org/dspace/content/service/MetadataValueService.java
+index 1cf26e37f1..01e33a04da 100644
+--- a/dspace-api/src/main/java/org/dspace/content/service/MetadataValueService.java
++++ b/dspace-api/src/main/java/org/dspace/content/service/MetadataValueService.java
+@@ -20,7 +20,8 @@ import org.dspace.core.Context;
+ 
+ /**
+  * Service interface class for the MetadataValue object.
+- * The implementation of this class is responsible for all business logic calls for the MetadataValue object and is
++ * The implementation of this class is responsible for all business logic calls
++ * for the MetadataValue object and is
+  * autowired by spring
+  *
+  * @author kevinvandevelde at atmire.com
+@@ -48,8 +49,7 @@ public interface MetadataValueService {
+      * @throws SQLException if database error
+      */
+     public MetadataValue find(Context context, int valueId)
+-        throws IOException, SQLException;
+-
++            throws IOException, SQLException;
+ 
+     /**
+      * Retrieves the metadata values for a given field from the database.
+@@ -61,14 +61,27 @@ public interface MetadataValueService {
+      * @throws SQLException if database error
+      */
+     public List<MetadataValue> findByField(Context context, MetadataField metadataField)
+-        throws IOException, SQLException;
++            throws IOException, SQLException;
++
++    /**
++     * Retrieves metadata values for a given field with linked DSpaceObject
++     * eagerly fetched.
++     *
++     * @param context       dspace context
++     * @param metadataField metadata field whose values to look for
++     * @return metadata values with linked DSpaceObject initialized
++     * @throws IOException  if IO error
++     * @throws SQLException if database error
++     */
++    public List<MetadataValue> findByFieldWithDSpaceObject(Context context, MetadataField metadataField)
++            throws IOException, SQLException;
+ 
+     /**
+      * Retrieves matching MetadataValues for a given field and value.
+      *
+-     * @param context dspace context
++     * @param context       dspace context
+      * @param metadataField The field that must match
+-     * @param value The value that must match
++     * @param value         The value that must match
+      * @return the matching MetadataValues
+      * @throws SQLException if database error
+      */
+@@ -85,7 +98,7 @@ public interface MetadataValueService {
+     public void update(Context context, MetadataValue metadataValue) throws SQLException;
+ 
+     public void update(Context context, MetadataValue metadataValue, boolean modifyParentObject)
+-        throws SQLException, AuthorizeException;
++            throws SQLException, AuthorizeException;
+ 
+     /**
+      * Delete the metadata field.
+@@ -109,7 +122,8 @@ public interface MetadataValueService {
+      * @throws SQLException if database error
+      */
+     public MetadataValue getMinimum(Context context, int metadataFieldId)
+-        throws SQLException;
++            throws SQLException;
++
+ 
+     int countTotal(Context context) throws SQLException;
+ }
+diff --git a/dspace-api/src/main/resources/spring/spring-dspace-addon-useractivityreport-services.xml b/dspace-api/src/main/resources/spring/spring-dspace-addon-useractivityreport-services.xml
+new file mode 100644
+index 0000000000..c9ebd77dbe
+--- /dev/null
++++ b/dspace-api/src/main/resources/spring/spring-dspace-addon-useractivityreport-services.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!--
++
++    The contents of this file are subject to the license and copyright
++    detailed in the LICENSE and NOTICE files at the root of the source
++    tree and available online at
++
++    http://www.dspace.org/license/
++
++-->
++<beans xmlns="http://www.springframework.org/schema/beans"
++       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
++       xmlns:context="http://www.springframework.org/schema/context"
++       xsi:schemaLocation="http://www.springframework.org/schema/beans
++           http://www.springframework.org/schema/beans/spring-beans.xsd
++           http://www.springframework.org/schema/context
++           http://www.springframework.org/schema/context/spring-context.xsd"
++       default-autowire-candidates="*Service,*DAO,javax.sql.DataSource">
++
++    <context:annotation-config/> <!-- allows us to use spring annotations in beans -->
++
++    <bean class="org.dspace.app.reporting.service.UsersActivitiesReportServiceImpl" id="org.dspace.app.reporting.service.UsersActivityReportService" />
++    <bean class="org.dspace.app.reporting.service.UsersActivitiesActionsCacheService" id="org.dspace.app.reporting.service.UsersActivitiesActionsCacheService" />
++</beans>
+diff --git a/dspace-api/src/test/java/org/dspace/app/reporting/service/UsersActivitiesActionsCacheServiceIT.java b/dspace-api/src/test/java/org/dspace/app/reporting/service/UsersActivitiesActionsCacheServiceIT.java
+new file mode 100644
+index 0000000000..05b38353c4
+--- /dev/null
++++ b/dspace-api/src/test/java/org/dspace/app/reporting/service/UsersActivitiesActionsCacheServiceIT.java
+@@ -0,0 +1,88 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.service;
++
++import static org.hamcrest.MatcherAssert.assertThat;
++import static org.hamcrest.Matchers.hasSize;
++import static org.hamcrest.Matchers.is;
++
++import java.util.List;
++
++import org.dspace.AbstractIntegrationTestWithDatabase;
++import org.dspace.app.reporting.model.UserAction;
++import org.dspace.builder.CollectionBuilder;
++import org.dspace.builder.CommunityBuilder;
++import org.dspace.builder.ItemBuilder;
++import org.dspace.content.Collection;
++import org.dspace.content.Item;
++import org.dspace.services.factory.DSpaceServicesFactory;
++import org.junit.Before;
++import org.junit.Test;
++import org.springframework.cache.CacheManager;
++
++/**
++ * Integration tests for {@link UsersActivitiesActionsCacheService}
++ *
++ * @author Jesiel Viana
++ */
++public class UsersActivitiesActionsCacheServiceIT extends AbstractIntegrationTestWithDatabase {
++
++        private UsersActivitiesActionsCacheService usersActivitiesActionsCacheService = DSpaceServicesFactory
++                        .getInstance().getServiceManager()
++                        .getServiceByName(null, UsersActivitiesActionsCacheService.class);
++
++        private Collection col;
++
++        @Before
++        @Override
++        public void setUp() throws Exception {
++                super.setUp();
++                // Clear cache before each test
++                CacheManager cacheManager = DSpaceServicesFactory.getInstance().getServiceManager()
++                                .getServiceByName(null, CacheManager.class);
++                if (cacheManager != null && cacheManager.getCache("usersActivities.allActions") != null) {
++                        cacheManager.getCache("usersActivities.allActions").clear();
++                }
++
++                context.turnOffAuthorisationSystem();
++                parentCommunity = CommunityBuilder.createCommunity(context)
++                                .withName("Parent Community")
++                                .build();
++                col = CollectionBuilder.createCollection(context, parentCommunity)
++                                .withName("Test Collection")
++                                .build();
++                context.restoreAuthSystemState();
++        }
++
++        @Test
++        public void testGetAllActions() throws Exception {
++                context.turnOffAuthorisationSystem();
++
++                String provenance = "Submitted by User One (user1@example.com) on 2024-01-15T12:00:00Z "
++                                + "workflow start=STEP1\n"
++                                + "Approved for entry into archive by Admin User (admin@example.com) on "
++                                + "2024-01-16T10:30:00Z";
++
++                Item item = ItemBuilder.createItem(context, col)
++                                .withTitle("Test Item")
++                                .withProvenanceData(provenance)
++                                .build();
++
++                context.restoreAuthSystemState();
++
++                List<UserAction> actions = usersActivitiesActionsCacheService.getAllActions(context);
++
++                assertThat(actions, hasSize(2));
++                assertThat(actions.get(0).getEmail(), is("admin@example.com"));
++                assertThat(actions.get(0).getActionType(), is("APPROVED"));
++                assertThat(actions.get(1).getEmail(), is("user1@example.com"));
++                assertThat(actions.get(1).getActionType(), is("SUBMITTED"));
++                assertThat(actions.get(0).getItemUUID(), is(item.getID().toString()));
++                assertThat(actions.get(1).getItemUUID(), is(item.getID().toString()));
++        }
++}
+diff --git a/dspace-api/src/test/java/org/dspace/app/reporting/service/UsersActivitiesReportServiceIT.java b/dspace-api/src/test/java/org/dspace/app/reporting/service/UsersActivitiesReportServiceIT.java
+new file mode 100644
+index 0000000000..2f99649423
+--- /dev/null
++++ b/dspace-api/src/test/java/org/dspace/app/reporting/service/UsersActivitiesReportServiceIT.java
+@@ -0,0 +1,138 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.service;
++
++import static org.hamcrest.MatcherAssert.assertThat;
++import static org.hamcrest.Matchers.is;
++import static org.hamcrest.Matchers.notNullValue;
++
++import java.util.Map;
++
++import org.dspace.AbstractIntegrationTestWithDatabase;
++import org.dspace.app.reporting.model.SummaryWithTrendData;
++import org.dspace.app.reporting.model.UserActivityStats;
++import org.dspace.builder.CollectionBuilder;
++import org.dspace.builder.CommunityBuilder;
++import org.dspace.builder.ItemBuilder;
++import org.dspace.content.Collection;
++import org.dspace.services.factory.DSpaceServicesFactory;
++import org.junit.Before;
++import org.junit.Test;
++import org.springframework.cache.CacheManager;
++
++/**
++ * Integration tests for {@link UsersActivitiesReportServiceImpl}
++ *
++ * @author Jesiel Viana
++ */
++public class UsersActivitiesReportServiceIT extends AbstractIntegrationTestWithDatabase {
++
++        private UsersActivitiesReportService usersActivitiesReportService = DSpaceServicesFactory.getInstance()
++                        .getServiceManager()
++                        .getServiceByName(null, UsersActivitiesReportService.class);
++
++        private Collection col;
++
++        @Before
++        @Override
++        public void setUp() throws Exception {
++                super.setUp();
++                // Clear cache before each test
++                CacheManager cacheManager = DSpaceServicesFactory.getInstance().getServiceManager()
++                                .getServiceByName(null, CacheManager.class);
++                if (cacheManager != null && cacheManager.getCache("usersActivities.allActions") != null) {
++                        cacheManager.getCache("usersActivities.allActions").clear();
++                }
++
++                context.turnOffAuthorisationSystem();
++                parentCommunity = CommunityBuilder.createCommunity(context)
++                                .withName("Parent Community")
++                                .build();
++                col = CollectionBuilder.createCollection(context, parentCommunity)
++                                .withName("Test Collection")
++                                .build();
++                context.restoreAuthSystemState();
++        }
++
++        @Test
++        public void testGetUsersActivitiesStatistics() throws Exception {
++                context.turnOffAuthorisationSystem();
++
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 1")
++                                .withProvenanceData("Submitted by User One (user1@example.com) on 2024-01-15T12:00:00Z")
++                                .build();
++
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 2")
++                                .withProvenanceData(
++                                                "Submitted by User One (user1@example.com) on 2024-02-15T12:00:00Z\n" +
++                                                                "Approved for entry into archive by Admin User"
++                                                                + " (admin@example.com) on 2024-02-16T10:30:00Z")
++                                .build();
++
++                context.restoreAuthSystemState();
++
++                Map<String, UserActivityStats> stats = usersActivitiesReportService
++                                .getUsersActivitiesStatistics(context);
++
++                assertThat(stats.get("user1@example.com"), notNullValue());
++                assertThat(stats.get("user1@example.com").getTotalSubmissions(), is(2));
++                assertThat(stats.get("admin@example.com").getTotalApprovals(), is(1));
++        }
++
++        @Test
++        public void testGetTotalStatistics() throws Exception {
++                context.turnOffAuthorisationSystem();
++
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 1")
++                                .withProvenanceData("Submitted by User One (user1@example.com) on 2024-01-15T12:00:00Z")
++                                .build();
++
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 2")
++                                .withProvenanceData(
++                                                "Rejected by Admin User (admin@example.com), reason: Typo on "
++                                                                + "2024-01-16T10:30:00Z")
++                                .build();
++
++                context.restoreAuthSystemState();
++
++                Map<String, Integer> totals = usersActivitiesReportService.getTotalStatistics(context);
++
++                assertThat(totals.get("submissions"), is(1));
++                assertThat(totals.get("rejections"), is(1));
++                assertThat(totals.get("reviews"), is(1));
++                assertThat(totals.get("totalUsers"), is(2));
++        }
++
++        @Test
++        public void testGetTotalStatisticsWithTrends() throws Exception {
++                context.turnOffAuthorisationSystem();
++
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 1")
++                                .withProvenanceData("Submitted by User One (user1@example.com) on 2024-01-15T12:00:00Z")
++                                .build();
++
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 2")
++                                .withProvenanceData("Submitted by User Two (user2@example.com) on 2024-02-15T12:00:00Z")
++                                .build();
++
++                context.restoreAuthSystemState();
++
++                SummaryWithTrendData summary = usersActivitiesReportService.getTotalStatisticsWithTrends(context);
++
++                assertThat(summary.getSubmissions(), is(2));
++                assertThat(summary.getTrendData().size(), is(2));
++                assertThat(summary.getTrendData().get("2024-01").get("SUBMITTED"), is(1));
++                assertThat(summary.getTrendData().get("2024-02").get("SUBMITTED"), is(1));
++        }
++}
+diff --git a/dspace-api/src/test/java/org/dspace/app/reporting/utils/ProvenanceParserTest.java b/dspace-api/src/test/java/org/dspace/app/reporting/utils/ProvenanceParserTest.java
+new file mode 100644
+index 0000000000..4678cf8466
+--- /dev/null
++++ b/dspace-api/src/test/java/org/dspace/app/reporting/utils/ProvenanceParserTest.java
+@@ -0,0 +1,129 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.reporting.utils;
++
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertNotNull;
++import static org.junit.Assert.assertTrue;
++
++import java.util.List;
++
++import org.dspace.app.reporting.model.UserAction;
++import org.junit.Test;
++
++/**
++ * Unit tests for {@link ProvenanceParser}
++ *
++ * @author Jesiel Viana
++ */
++public class ProvenanceParserTest {
++
++    @Test
++    public void testParseSubmission() {
++        String line = "Submitted by User One (user1@example.com) on 2024-01-15T12:00:00Z workflow start=STEP1";
++        List<UserAction> actions = ProvenanceParser.parseProvenanceText(line);
++
++        assertEquals(1, actions.size());
++        UserAction action = actions.get(0);
++        assertEquals("SUBMITTED", action.getActionType());
++        assertEquals("User One", action.getUserName());
++        assertEquals("user1@example.com", action.getEmail());
++        assertNotNull(action.getActionDate());
++        assertEquals("workflow start=STEP1", action.getDetails());
++    }
++
++    @Test
++    public void testParseApproval() {
++        String line = "Approved for entry into archive by Admin User (admin@example.com) on 2024-01-16T10:30:00Z";
++        List<UserAction> actions = ProvenanceParser.parseProvenanceText(line);
++
++        assertEquals(1, actions.size());
++        UserAction action = actions.get(0);
++        assertEquals("APPROVED", action.getActionType());
++        assertEquals("Admin User", action.getUserName());
++        assertEquals("admin@example.com", action.getEmail());
++        assertEquals("Approved for entry into archive", action.getDetails());
++    }
++
++    @Test
++    public void testParseEditstepApproval() {
++        String line = "Step: editstep - action:editaction Approved for entry into archive by "
++                + "Admin User (admin@example.com) on 2024-01-17T10:30:00Z";
++        List<UserAction> actions = ProvenanceParser.parseProvenanceText(line);
++
++        assertEquals(1, actions.size());
++        UserAction action = actions.get(0);
++        assertEquals("APPROVED", action.getActionType());
++        assertEquals("Admin User", action.getUserName());
++        assertEquals("Approved for entry into archive (editstep)", action.getDetails());
++    }
++
++    @Test
++    public void testParseRejection() {
++        String line = "Rejected by Admin User (admin@example.com), reason: Oops on 2024-01-18T10:30:00Z";
++        List<UserAction> actions = ProvenanceParser.parseProvenanceText(line);
++
++        assertEquals(1, actions.size());
++        UserAction action = actions.get(0);
++        assertEquals("REJECTED", action.getActionType());
++        assertEquals("Rejected: Oops", action.getDetails());
++    }
++
++    @Test
++    public void testParseEditstepRejection() {
++        String line = "Step: editstep - action:editaction Rejected by Admin User (admin@example.com), "
++                + "reason: Missing metadata on 2024-01-19T10:30:00Z";
++        List<UserAction> actions = ProvenanceParser.parseProvenanceText(line);
++
++        assertEquals(1, actions.size());
++        UserAction action = actions.get(0);
++        assertEquals("REJECTED", action.getActionType());
++        assertEquals("Rejected: Missing metadata", action.getDetails());
++    }
++
++    @Test
++    public void testParseWithdrawn() {
++        String line = "Item withdrawn by User One (user1@example.com) on 2024-01-20T12:00:00Z";
++        List<UserAction> actions = ProvenanceParser.parseProvenanceText(line);
++
++        assertEquals(1, actions.size());
++        UserAction action = actions.get(0);
++        assertEquals("WITHDRAWN", action.getActionType());
++        assertEquals("Item withdrawn", action.getDetails());
++    }
++
++    @Test
++    public void testMultiLineParsing() {
++        String provenance = "Submitted by User One (user1@example.com) on 2024-01-15T12:00:00Z\n"
++                + "Approved for entry into archive by Admin User (admin@example.com) on 2024-01-16T10:30:00Z";
++        List<UserAction> actions = ProvenanceParser.parseProvenanceText(provenance);
++
++        assertEquals(2, actions.size());
++        assertEquals("SUBMITTED", actions.get(0).getActionType());
++        assertEquals("APPROVED", actions.get(1).getActionType());
++    }
++
++    @Test
++    public void testDateParsingFormats() {
++        // ISO format
++        String line1 = "Item withdrawn by U (e) on 2024-01-20T12:00:00Z";
++        assertEquals(1, ProvenanceParser.parseProvenanceText(line1).size());
++
++        // GMT format
++        String line2 = "Item withdrawn by U (e) on 2024-01-20T12:00:00 (GMT)";
++        assertEquals(1, ProvenanceParser.parseProvenanceText(line2).size());
++    }
++
++    @Test
++    public void testEdgeCases() {
++        assertTrue(ProvenanceParser.parseProvenanceText(null).isEmpty());
++        assertTrue(ProvenanceParser.parseProvenanceText("").isEmpty());
++        assertTrue(ProvenanceParser.parseProvenanceText("   ").isEmpty());
++        assertTrue(ProvenanceParser.parseProvenanceText("Invalid line").isEmpty());
++    }
++}
+diff --git a/dspace-server-webapp/src/main/java/org/dspace/app/rest/UsersActivitiesReportController.java b/dspace-server-webapp/src/main/java/org/dspace/app/rest/UsersActivitiesReportController.java
+new file mode 100644
+index 0000000000..9baf9ca590
+--- /dev/null
++++ b/dspace-server-webapp/src/main/java/org/dspace/app/rest/UsersActivitiesReportController.java
+@@ -0,0 +1,165 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.rest;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Map;
++
++import jakarta.servlet.http.HttpServletRequest;
++import org.apache.logging.log4j.Logger;
++import org.dspace.app.reporting.model.PaginatedUserActionsResponse;
++import org.dspace.app.reporting.model.SummaryWithTrendData;
++import org.dspace.app.reporting.model.UserActivityStats;
++import org.dspace.app.reporting.service.UsersActivitiesReportService;
++import org.dspace.app.rest.utils.ContextUtil;
++import org.dspace.core.Context;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.ResponseEntity;
++import org.springframework.security.access.prepost.PreAuthorize;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.RequestParam;
++import org.springframework.web.bind.annotation.RestController;
++
++/**
++ * REST Controller for user activity reporting
++ * Provides endpoints to retrieve statistics about user submissions and reviews
++ */
++@RestController
++@RequestMapping("/api/reports/users-activities")
++public class UsersActivitiesReportController {
++
++    private static final Logger log = org.apache.logging.log4j.LogManager
++            .getLogger(UsersActivitiesReportController.class);
++
++    @Autowired
++    private UsersActivitiesReportService usersActivitiesReportService;
++
++    /**
++     * Get users activity report
++     *
++     * @param request HTTP request
++     * @return UserActivityReportRest with all statistics
++     */
++    @PreAuthorize("hasAuthority('ADMIN')")
++    @GetMapping()
++    public ResponseEntity<?> getUsersActivitiesReport(HttpServletRequest request) {
++        try {
++            Context context = ContextUtil.obtainContext(request);
++
++            // Get all statistics
++            Map<String, UserActivityStats> userStats = usersActivitiesReportService
++                    .getUsersActivitiesStatistics(context);
++
++            List<UserActivityStats> userActivityStats = new ArrayList<>(userStats.values());
++
++            context.complete();
++            return new ResponseEntity<>(userActivityStats, HttpStatus.OK);
++
++        } catch (Exception e) {
++            log.error("Error generating user activity report", e);
++            return new ResponseEntity<>("Error generating report: " + e.getMessage(),
++                    HttpStatus.INTERNAL_SERVER_ERROR);
++        }
++    }
++
++    /**
++     * Get total statistics (summary counts)
++     *
++     * @param request HTTP request
++     * @return map with total counts
++     */
++    @PreAuthorize("hasAuthority('ADMIN')")
++    @GetMapping("/summary")
++    public ResponseEntity<?> getSummary(HttpServletRequest request) {
++        try {
++            Context context = ContextUtil.obtainContext(request);
++
++            Map<String, Integer> totals = usersActivitiesReportService.getTotalStatistics(context);
++
++            context.complete();
++            return new ResponseEntity<>(totals, HttpStatus.OK);
++
++        } catch (Exception e) {
++            log.error("Error generating summary statistics", e);
++            return new ResponseEntity<>("Error generating summary: " + e.getMessage(),
++                    HttpStatus.INTERNAL_SERVER_ERROR);
++        }
++    }
++
++    /**
++     * Get all actions (submissions and reviews) with optional filtering and
++     * pagination.
++     *
++     * @param request    HTTP request
++     * @param page       page number (0-based), default 0
++     * @param size       page size, default 100
++     * @param itemId     optional item id filter
++     * @param actionType optional action type filter
++     * @param userEmail  optional user email filter
++     * @param userName   optional user name filter
++     * @return paginated response with actions and page metadata
++     */
++    @PreAuthorize("hasAuthority('ADMIN')")
++    @GetMapping("/actions")
++    public ResponseEntity<?> getAllActions(HttpServletRequest request,
++            @RequestParam(defaultValue = "0") int page,
++            @RequestParam(defaultValue = "100") int size,
++            @RequestParam(required = false) String itemId,
++            @RequestParam(required = false) String actionType,
++            @RequestParam(required = false) String userEmail,
++            @RequestParam(required = false) String userName) {
++        try {
++            Context context = ContextUtil.obtainContext(request);
++
++            PaginatedUserActionsResponse actions = usersActivitiesReportService.getActions(
++                    context,
++                    page,
++                    size,
++                    itemId,
++                    actionType,
++                    userEmail,
++                    userName);
++
++            context.complete();
++            return new ResponseEntity<>(actions, HttpStatus.OK);
++
++        } catch (Exception e) {
++            log.error("Error retrieving actions", e);
++            return new ResponseEntity<>("Error retrieving actions: " + e.getMessage(),
++                    HttpStatus.INTERNAL_SERVER_ERROR);
++        }
++    }
++
++    /**
++     * Get total statistics with trend data aggregated by month
++     *
++     * @param request HTTP request
++     * @return SummaryWithTrendData with totals and monthly trends
++     */
++    @PreAuthorize("hasAuthority('ADMIN')")
++    @GetMapping("/summary-with-trends")
++    public ResponseEntity<?> getSummaryWithTrends(HttpServletRequest request) {
++        try {
++            Context context = ContextUtil.obtainContext(request);
++
++            SummaryWithTrendData summary = usersActivitiesReportService.getTotalStatisticsWithTrends(context);
++
++            context.complete();
++            return new ResponseEntity<>(summary, HttpStatus.OK);
++
++        } catch (Exception e) {
++            log.error("Error generating summary with trends", e);
++            return new ResponseEntity<>("Error generating summary with trends: " + e.getMessage(),
++                    HttpStatus.INTERNAL_SERVER_ERROR);
++        }
++    }
++
++}
+diff --git a/dspace-server-webapp/src/test/java/org/dspace/app/rest/UsersActivitiesReportControllerIT.java b/dspace-server-webapp/src/test/java/org/dspace/app/rest/UsersActivitiesReportControllerIT.java
+new file mode 100644
+index 0000000000..d4e41ab458
+--- /dev/null
++++ b/dspace-server-webapp/src/test/java/org/dspace/app/rest/UsersActivitiesReportControllerIT.java
+@@ -0,0 +1,257 @@
++/**
++ * The contents of this file are subject to the license and copyright
++ * detailed in the LICENSE and NOTICE files at the root of the source
++ * tree and available online at
++ *
++ * http://www.dspace.org/license/
++ */
++package org.dspace.app.rest;
++
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++import org.dspace.app.rest.test.AbstractControllerIntegrationTest;
++import org.dspace.builder.CollectionBuilder;
++import org.dspace.builder.CommunityBuilder;
++import org.dspace.builder.ItemBuilder;
++import org.dspace.content.Collection;
++import org.dspace.services.factory.DSpaceServicesFactory;
++import org.hamcrest.Matchers;
++import org.junit.Before;
++import org.junit.Test;
++import org.springframework.cache.CacheManager;
++
++/**
++ * Integration tests for {@link UsersActivitiesReportController}
++ *
++ * @author Jesiel Viana
++ */
++public class UsersActivitiesReportControllerIT extends AbstractControllerIntegrationTest {
++
++        private Collection col;
++
++        @Before
++        @Override
++        public void setUp() throws Exception {
++                super.setUp();
++
++                // Clear cache before each test
++                CacheManager cacheManager = DSpaceServicesFactory.getInstance().getServiceManager()
++                                .getServiceByName(null, CacheManager.class);
++                if (cacheManager != null && cacheManager.getCache("usersActivities.allActions") != null) {
++                        cacheManager.getCache("usersActivities.allActions").clear();
++                }
++
++                context.turnOffAuthorisationSystem();
++                parentCommunity = CommunityBuilder.createCommunity(context)
++                                .withName("Parent Community")
++                                .build();
++                col = CollectionBuilder.createCollection(context, parentCommunity)
++                                .withName("Test Collection")
++                                .build();
++                context.restoreAuthSystemState();
++        }
++
++        @Test
++        public void testGetUsersActivitiesReport() throws Exception {
++                context.turnOffAuthorisationSystem();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 1")
++                                .withProvenanceData("Submitted by User One (user1@example.com) on "
++                                                + "2024-01-15T12:00:00Z workflow start=STEP1\n"
++                                                + "Approved for entry into archive by Admin User"
++                                                + " (admin@example.com) on 2024-01-16T10:30:00Z")
++                                .build();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 2")
++                                .withProvenanceData("Step: editstep - action:editaction Approved for "
++                                                + "entry into archive by Admin User (admin@example.com) "
++                                                + "on 2024-01-17T10:30:00Z")
++                                .build();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 3")
++                                .withProvenanceData(
++                                                "Rejected by Admin User (admin@example.com), reason: Oops on "
++                                                                + "2024-01-18T10:30:00Z")
++                                .build();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 4")
++                                .withProvenanceData("Step: editstep - action:editaction Rejected by "
++                                                + "Admin User (admin@example.com), reason: Missing metadata "
++                                                + "on 2024-01-19T10:30:00Z")
++                                .build();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 5")
++                                .withProvenanceData(
++                                                "Item withdrawn by User One (user1@example.com) on "
++                                                                + "2024-01-20T12:00:00Z")
++                                .build();
++                context.restoreAuthSystemState();
++
++                String token = getAuthToken(admin.getEmail(), password);
++
++                getClient(token).perform(get("/api/reports/users-activities"))
++                                .andExpect(status().isOk())
++                                .andExpect(jsonPath("$", Matchers.hasSize(2))) // user1 and admin
++                                .andExpect(jsonPath("$[?(@.email=='user1@example.com')].totalSubmissions",
++                                                Matchers.contains(1)))
++                                .andExpect(jsonPath("$[?(@.email=='user1@example.com')].totalWithdrawals",
++                                                Matchers.contains(1)))
++                                .andExpect(jsonPath("$[?(@.email=='admin@example.com')].totalApprovals",
++                                                Matchers.contains(2)))
++                                .andExpect(jsonPath("$[?(@.email=='admin@example.com')].totalRejections",
++                                                Matchers.contains(2)));
++        }
++
++        @Test
++        public void testGetSummary() throws Exception {
++                context.turnOffAuthorisationSystem();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 1")
++                                .withProvenanceData("Submitted by User One (user1@example.com) on "
++                                                + "2024-01-15T12:00:00Z\n"
++                                                + "Approved for entry into archive by Admin User"
++                                                + " (admin@example.com) on 2024-01-16T10:30:00Z")
++                                .build();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 2")
++                                .withProvenanceData("Rejected by Admin User (admin@example.com), "
++                                                + "reason: Outdated on 2024-01-17T10:30:00Z")
++                                .build();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 3")
++                                .withProvenanceData("Item withdrawn by User One (user1@example.com) "
++                                                + "on 2024-01-18T12:00:00Z")
++                                .build();
++                context.restoreAuthSystemState();
++
++                String token = getAuthToken(admin.getEmail(), password);
++
++                getClient(token).perform(get("/api/reports/users-activities/summary"))
++                                .andExpect(status().isOk())
++                                .andExpect(jsonPath("$.submissions", Matchers.is(1)))
++                                .andExpect(jsonPath("$.approvals", Matchers.is(1)))
++                                .andExpect(jsonPath("$.rejections", Matchers.is(1)))
++                                .andExpect(jsonPath("$.withdrawals", Matchers.is(1)))
++                                .andExpect(jsonPath("$.totalUsers", Matchers.is(2)));
++        }
++
++        @Test
++        public void testGetAllActions() throws Exception {
++                context.turnOffAuthorisationSystem();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 1")
++                                .withProvenanceData("Submitted by User One (user1@example.com) on "
++                                                + "2024-01-15T12:00:00Z\n"
++                                                + "Step: editstep - action:editaction Approved for entry "
++                                                + "into archive by Admin User (admin@example.com) on "
++                                                + "2024-01-16T10:30:00Z")
++                                .build();
++                context.restoreAuthSystemState();
++
++                String token = getAuthToken(admin.getEmail(), password);
++
++                getClient(token).perform(get("/api/reports/users-activities/actions"))
++                                .andExpect(status().isOk())
++                                .andExpect(jsonPath("$.totalElements", Matchers.is(2)))
++                                .andExpect(jsonPath("$.totalPages", Matchers.is(1)))
++                                .andExpect(jsonPath("$.currentPage", Matchers.is(0)))
++                                .andExpect(jsonPath("$.pageSize", Matchers.is(100)))
++                                .andExpect(jsonPath("$.content", Matchers.hasSize(2)))
++                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].actionType",
++                                                Matchers.contains("SUBMITTED")))
++                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].itemUUID",
++                                                Matchers.contains(Matchers.notNullValue())))
++                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].itemId",
++                                                Matchers.contains(Matchers.notNullValue())))
++                                .andExpect(jsonPath("$.content[?(@.email=='user1@example.com')].itemTitle",
++                                                Matchers.contains("Item 1")))
++                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].actionType",
++                                                Matchers.contains("APPROVED")))
++                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].itemUUID",
++                                                Matchers.contains(Matchers.notNullValue())))
++                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].itemId",
++                                                Matchers.contains(Matchers.notNullValue())))
++                                .andExpect(jsonPath("$.content[?(@.email=='admin@example.com')].itemTitle",
++                                                Matchers.contains("Item 1")));
++        }
++
++        @Test
++        public void testGetAllActionsWithPaginationAndFilters() throws Exception {
++                context.turnOffAuthorisationSystem();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Paged Item")
++                                .withProvenanceData("Submitted by User One (user.one@example.com) on "
++                                                + "2024-01-15T12:00:00Z\n"
++                                                + "Approved for entry into archive by Admin User "
++                                                + "(admin@example.com) on 2024-01-16T10:30:00Z\n"
++                                                + "Rejected by Admin User (admin@example.com), reason: Oops on "
++                                                + "2024-01-17T10:30:00Z")
++                                .build();
++                context.restoreAuthSystemState();
++
++                String token = getAuthToken(admin.getEmail(), password);
++
++                getClient(token).perform(get("/api/reports/users-activities/actions")
++                                .param("userEmail", "ADMIN@EXAMPLE")
++                                .param("userName", "admin")
++                                .param("actionType", "rej")
++                                .param("itemId", "-")
++                                .param("page", "0")
++                                .param("size", "1"))
++                                .andExpect(status().isOk())
++                                .andExpect(jsonPath("$.totalElements", Matchers.is(1)))
++                                .andExpect(jsonPath("$.totalPages", Matchers.is(1)))
++                                .andExpect(jsonPath("$.currentPage", Matchers.is(0)))
++                                .andExpect(jsonPath("$.pageSize", Matchers.is(1)))
++                                .andExpect(jsonPath("$.content", Matchers.hasSize(1)))
++                                .andExpect(jsonPath("$.content[0].actionType", Matchers.is("REJECTED")))
++                                .andExpect(jsonPath("$.content[0].email", Matchers.is("admin@example.com")));
++
++                getClient(token).perform(get("/api/reports/users-activities/actions")
++                                .param("size", "1")
++                                .param("page", "1"))
++                                .andExpect(status().isOk())
++                                .andExpect(jsonPath("$.totalElements", Matchers.is(3)))
++                                .andExpect(jsonPath("$.totalPages", Matchers.is(3)))
++                                .andExpect(jsonPath("$.currentPage", Matchers.is(1)))
++                                .andExpect(jsonPath("$.pageSize", Matchers.is(1)))
++                                .andExpect(jsonPath("$.content", Matchers.hasSize(1)));
++        }
++
++        @Test
++        public void testGetSummaryWithTrends() throws Exception {
++                context.turnOffAuthorisationSystem();
++                ItemBuilder.createItem(context, col)
++                                .withTitle("Item 1")
++                                .withProvenanceData("Submitted by User One (user1@example.com) on "
++                                                + "2024-01-15T12:00:00Z\n"
++                                                + "Approved for entry into archive by Admin User"
++                                                + " (admin@example.com) on 2024-02-15T12:00:00Z")
++                                .build();
++                context.restoreAuthSystemState();
++
++                String token = getAuthToken(admin.getEmail(), password);
++
++                getClient(token).perform(get("/api/reports/users-activities/summary-with-trends"))
++                                .andExpect(status().isOk())
++                                .andExpect(jsonPath("$.submissions", Matchers.is(1)))
++                                .andExpect(jsonPath("$.approvals", Matchers.is(1)))
++                                .andExpect(jsonPath("$.trendData['2024-01'].SUBMITTED", Matchers.is(1)))
++                                .andExpect(jsonPath("$.trendData['2024-02'].APPROVED", Matchers.is(1)));
++        }
++
++        @Test
++        public void testUnauthorized() throws Exception {
++                getClient().perform(get("/api/reports/users-activities"))
++                                .andExpect(status().isUnauthorized());
++        }
++
++        @Test
++        public void testForbiddenForNonAdmin() throws Exception {
++                String token = getAuthToken(eperson.getEmail(), password);
++                getClient(token).perform(get("/api/reports/users-activities"))
++                                .andExpect(status().isForbidden());
++        }
++}
+diff --git a/dspace/config/ehcache.xml b/dspace/config/ehcache.xml
+index 41508a5fa8..ab26971451 100644
+--- a/dspace/config/ehcache.xml
++++ b/dspace/config/ehcache.xml
+@@ -6,9 +6,8 @@
+     http://www.dspace.org/license/
+ -->
+ <config xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+-        xmlns='http://www.ehcache.org/v3'
+-        xsi:schemaLocation="http://www.ehcache.org/v3
+-                            http://www.ehcache.org/schema/ehcache-core-3.7.xsd">
++    xmlns='http://www.ehcache.org/v3'
++    xsi:schemaLocation="http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.7.xsd">
+ 
+     <cache-template name="iiif-default">
+         <listeners>
+@@ -62,8 +61,17 @@
+         </resources>
+     </cache-template>
+ 
+-    <cache alias="manifests" uses-template="iiif-default"/>
+-    <cache alias="canvasdimensions" uses-template="iiif-canvas"/>
+-    <cache alias="sherpa.searchByJournalISSN" uses-template="sherpa-default"/>
++    <cache alias="manifests" uses-template="iiif-default" />
++    <cache alias="canvasdimensions" uses-template="iiif-canvas" />
++    <cache alias="sherpa.searchByJournalISSN" uses-template="sherpa-default" />
++
++    <cache alias="usersActivities.allActions">
++        <expiry>
++            <ttl unit="hours">1</ttl>
++        </expiry>
++        <resources>
++            <heap>1</heap>
++        </resources>
++    </cache>
+ 
+ </config>
+\ No newline at end of file
