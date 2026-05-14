@@ -32,4 +32,11 @@
   </dc-type>
 -->
 
+    <dc-type>
+        <schema>local</schema>
+        <element>politics</element>
+        <qualifier></qualifier>
+        <scope_note>Custom field for political</scope_note>
+    </dc-type>
+
 </dspace-dc-types>

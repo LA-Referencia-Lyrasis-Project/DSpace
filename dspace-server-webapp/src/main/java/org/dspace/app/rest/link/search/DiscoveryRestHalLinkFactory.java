@@ -20,21 +20,23 @@ import org.springframework.web.util.UriComponentsBuilder;
 public abstract class DiscoveryRestHalLinkFactory<T> extends HalLinkFactory<T, DiscoveryRestController> {
 
     /**
-     * This method will build the base search link for the data that's been given to it
+     * This method will build the base search link for the data that's been given to
+     * it
      *
-     * @param data  The data for which a link will be constructed
-     * @return      The link without extra filters to the endpoint for this data
+     * @param data The data for which a link will be constructed
+     * @return The link without extra filters to the endpoint for this data
      */
     public UriComponentsBuilder buildSearchBaseLink(final DiscoveryResultsRest data) {
         try {
             UriComponentsBuilder uriBuilder = uriBuilder(getMethodOn()
-                    .getSearchObjects(data.getQuery(), data.getDsoTypes(),
+                    .getSearchObjects(data.getQuery(), null, data.getDsoTypes(),
                             data.getScope(), data.getConfiguration(),
                             null, null));
 
             return addFilterParams(uriBuilder, data);
         } catch (Exception ex) {
-            //The method throwing the exception is never really executed, so this exception can never occur
+            // The method throwing the exception is never really executed, so this exception
+            // can never occur
             return null;
         }
     }
@@ -43,36 +45,39 @@ public abstract class DiscoveryRestHalLinkFactory<T> extends HalLinkFactory<T, D
         try {
             UriComponentsBuilder uriBuilder = uriBuilder(
                     getMethodOn().getFacetValues(data.getFacetEntry().getName(), data.getPrefix(), data.getQuery(),
-                            data.getDsoTypes(), data.getScope(), data.getConfiguration(), null, null));
+                            null, data.getDsoTypes(), data.getScope(), data.getConfiguration(), null, null));
 
             return addFilterParams(uriBuilder, data);
         } catch (Exception ex) {
-            //The method throwing the exception is never really executed, so this exception can never occur
+            // The method throwing the exception is never really executed, so this exception
+            // can never occur
             return null;
         }
     }
 
     protected UriComponentsBuilder buildSearchFacetsBaseLink(final SearchResultsRest data) {
         try {
-            UriComponentsBuilder uriBuilder = uriBuilder(getMethodOn().getFacets(data.getQuery(), data.getDsoTypes(),
+            UriComponentsBuilder uriBuilder = uriBuilder(getMethodOn().getFacets(data.getQuery(), null,
+                    data.getDsoTypes(),
                     data.getScope(), data.getConfiguration(), null, null));
 
             uriBuilder = addSortingParms(uriBuilder, data);
 
             return addFilterParams(uriBuilder, data);
         } catch (Exception ex) {
-            //The method throwing the exception is never really executed, so this exception can never occur
+            // The method throwing the exception is never really executed, so this exception
+            // can never occur
             return null;
         }
     }
 
     protected UriComponentsBuilder addFilterParams(UriComponentsBuilder uriComponentsBuilder,
-                                                   DiscoveryResultsRest data) {
+            DiscoveryResultsRest data) {
         if (uriComponentsBuilder != null && data != null && data.getAppliedFilters() != null) {
             for (SearchResultsRest.AppliedFilter filter : data.getAppliedFilters()) {
-                //TODO Make sure the filter format is defined in only one place
+                // TODO Make sure the filter format is defined in only one place
                 uriComponentsBuilder
-                    .queryParam("f." + filter.getFilter(), filter.getValue() + "," + filter.getOperator());
+                        .queryParam("f." + filter.getFilter(), filter.getValue() + "," + filter.getOperator());
             }
         }
 
@@ -80,7 +85,7 @@ public abstract class DiscoveryRestHalLinkFactory<T> extends HalLinkFactory<T, D
     }
 
     protected UriComponentsBuilder addSortingParms(UriComponentsBuilder uriComponentsBuilder,
-                                                   DiscoveryResultsRest data) {
+            DiscoveryResultsRest data) {
         if (uriComponentsBuilder != null && data != null && data.getSort() != null) {
             uriComponentsBuilder.queryParam("sort", data.getSort().getBy() + "," + data.getSort().getOrder());
         }

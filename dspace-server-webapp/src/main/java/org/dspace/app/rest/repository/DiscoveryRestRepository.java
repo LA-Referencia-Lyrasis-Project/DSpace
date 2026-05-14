@@ -41,7 +41,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 /**
- * This class' purpose is to return a REST object to the controller class. This repository handles all the
+ * This class' purpose is to return a REST object to the controller class. This
+ * repository handles all the
  * information lookup
  * that has to be done for the endpoint
  */
@@ -83,21 +84,21 @@ public class DiscoveryRestRepository extends AbstractDSpaceRestRepository {
     public SearchConfigurationRest getSearchConfiguration(final String dsoScope, final String configuration) {
         Context context = obtainContext();
 
-        IndexableObject scopeObject = scopeResolver.resolveScope(context, dsoScope);
+        IndexableObject<?, ?> scopeObject = scopeResolver.resolveScope(context, dsoScope);
         DiscoveryConfiguration discoveryConfiguration = searchConfigurationService
-            .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
+                .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
 
         return discoverConfigurationConverter.convert(discoveryConfiguration, utils.obtainProjection());
     }
 
     public SearchResultsRest getSearchObjects(final String query, final List<String> dsoTypes, final String dsoScope,
-                                              final String configuration,
-                                              final List<SearchFilter> searchFilters, final Pageable page,
-                                              final Projection projection) {
+            final String configuration, final String searchType,
+            final List<SearchFilter> searchFilters, final Pageable page,
+            final Projection projection) {
         Context context = obtainContext();
-        IndexableObject scopeObject = scopeResolver.resolveScope(context, dsoScope);
+        IndexableObject<?, ?> scopeObject = scopeResolver.resolveScope(context, dsoScope);
         DiscoveryConfiguration discoveryConfiguration = searchConfigurationService
-            .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
+                .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
 
         boolean isRelatedItem = discoveryConfiguration instanceof DiscoveryRelatedItemConfiguration;
 
@@ -106,7 +107,8 @@ public class DiscoveryRestRepository extends AbstractDSpaceRestRepository {
 
         try {
             discoverQuery = queryBuilder
-                .buildQuery(context, scopeObject, discoveryConfiguration, query, searchFilters, dsoTypes, page);
+                    .buildQuery(context, scopeObject, discoveryConfiguration, query, searchFilters, dsoTypes, page,
+                            searchType);
             if (isRelatedItem) {
                 searchResult = searchService.search(context, discoverQuery);
             } else {
@@ -119,16 +121,16 @@ public class DiscoveryRestRepository extends AbstractDSpaceRestRepository {
         }
 
         return discoverResultConverter
-            .convert(context, query, dsoTypes, configuration, dsoScope, searchFilters, page, searchResult,
-                     discoveryConfiguration, projection);
+                .convert(context, query, dsoTypes, configuration, dsoScope, searchFilters, page, searchResult,
+                        discoveryConfiguration, projection);
     }
 
     public FacetConfigurationRest getFacetsConfiguration(final String dsoScope, final String configuration) {
         Context context = obtainContext();
 
-        IndexableObject scopeObject = scopeResolver.resolveScope(context, dsoScope);
+        IndexableObject<?, ?> scopeObject = scopeResolver.resolveScope(context, dsoScope);
         DiscoveryConfiguration discoveryConfiguration = searchConfigurationService
-            .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
+                .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
 
         return discoverFacetConfigurationConverter.convert(configuration, dsoScope, discoveryConfiguration);
     }
@@ -137,15 +139,16 @@ public class DiscoveryRestRepository extends AbstractDSpaceRestRepository {
         return discoverSearchSupportConverter.convert();
     }
 
-    public FacetResultsRest getFacetObjects(String facetName, String prefix, String query, List<String> dsoTypes,
-            String dsoScope, final String configuration, List<SearchFilter> searchFilters, Pageable page)
-                    throws SearchServiceException {
+    public FacetResultsRest getFacetObjects(String facetName, String prefix, String query, String searchType,
+            List<String> dsoTypes, String dsoScope, final String configuration,
+            List<SearchFilter> searchFilters, Pageable page)
+            throws SearchServiceException {
 
         Context context = obtainContext();
 
-        IndexableObject scopeObject = scopeResolver.resolveScope(context, dsoScope);
+        IndexableObject<?, ?> scopeObject = scopeResolver.resolveScope(context, dsoScope);
         DiscoveryConfiguration discoveryConfiguration = searchConfigurationService
-            .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
+                .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
 
         boolean isRelatedItem = discoveryConfiguration instanceof DiscoveryRelatedItemConfiguration;
 
@@ -153,7 +156,7 @@ public class DiscoveryRestRepository extends AbstractDSpaceRestRepository {
         DiscoverQuery discoverQuery;
         try {
             discoverQuery = queryBuilder.buildFacetQuery(context, scopeObject, discoveryConfiguration, prefix, query,
-                    searchFilters, dsoTypes, page, facetName);
+                    searchFilters, dsoTypes, page, facetName, searchType);
             if (isRelatedItem) {
                 searchResult = searchService.search(context, discoverQuery);
             } else {
@@ -170,14 +173,14 @@ public class DiscoveryRestRepository extends AbstractDSpaceRestRepository {
         return facetResultsRest;
     }
 
-    public SearchResultsRest getAllFacets(String query, List<String> dsoTypes, String dsoScope, String configuration,
-                                          List<SearchFilter> searchFilters) {
+    public SearchResultsRest getAllFacets(String query, String searchType, List<String> dsoTypes, String dsoScope,
+            String configuration, List<SearchFilter> searchFilters) {
 
         Context context = obtainContext();
         Pageable page = PageRequest.of(1, 1);
-        IndexableObject scopeObject = scopeResolver.resolveScope(context, dsoScope);
+        IndexableObject<?, ?> scopeObject = scopeResolver.resolveScope(context, dsoScope);
         DiscoveryConfiguration discoveryConfiguration = searchConfigurationService
-            .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
+                .getDiscoveryConfigurationByNameOrIndexableObject(context, configuration, scopeObject);
 
         boolean isRelatedItem = discoveryConfiguration instanceof DiscoveryRelatedItemConfiguration;
 
@@ -186,7 +189,8 @@ public class DiscoveryRestRepository extends AbstractDSpaceRestRepository {
 
         try {
             discoverQuery = queryBuilder
-                .buildQuery(context, scopeObject, discoveryConfiguration, query, searchFilters, dsoTypes, page);
+                    .buildQuery(context, scopeObject, discoveryConfiguration, query, searchFilters, dsoTypes, page,
+                            searchType);
 
             if (isRelatedItem) {
                 searchResult = searchService.search(context, discoverQuery);
