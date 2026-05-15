@@ -12,10 +12,12 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import org.dspace.app.rest.DiscoveryRestController;
 
 /**
- * This class' purpose is to create a container for the information in the SearchResultEntryResource
+ * This class' purpose is to create a container for the information in the
+ * SearchResultEntryResource
  */
 public class SearchResultEntryRest extends RestAddressableModel {
 
@@ -26,6 +28,8 @@ public class SearchResultEntryRest extends RestAddressableModel {
     private Map<String, List<String>> hitHighlights;
 
     private RestAddressableModel indexableObject;
+
+    private Double score;
 
     @JsonIgnore
     public String getCategory() {
@@ -71,5 +75,13 @@ public class SearchResultEntryRest extends RestAddressableModel {
 
     public void setIndexableObject(final RestAddressableModel indexableObject) {
         this.indexableObject = indexableObject;
+    }
+
+    public Double getScore() {
+        return score;
+    }
+
+    public void setScore(Double score) {
+        this.score = score;
     }
 }

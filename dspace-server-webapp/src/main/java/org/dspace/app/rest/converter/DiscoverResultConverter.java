@@ -30,7 +30,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 /**
- * This class' purpose is to create a SearchResultsRest object from the given parameters
+ * This class' purpose is to create a SearchResultsRest object from the given
+ * parameters
  */
 @Component
 public class DiscoverResultConverter {
@@ -48,11 +49,13 @@ public class DiscoverResultConverter {
     @Autowired
     private SearchFilterToAppliedFilterConverter searchFilterToAppliedFilterConverter;
 
+    private static final String SCORE_FIELD = "score";
+
     public SearchResultsRest convert(final Context context, final String query, final List<String> dsoTypes,
-                                     final String configurationName, final String scope,
-                                     final List<SearchFilter> searchFilters, final Pageable page,
-                                     final DiscoverResult searchResult, final DiscoveryConfiguration configuration,
-                                     final Projection projection) {
+            final String configurationName, final String scope,
+            final List<SearchFilter> searchFilters, final Pageable page,
+            final DiscoverResult searchResult, final DiscoveryConfiguration configuration,
+            final Projection projection) {
 
         SearchResultsRest resultsRest = new SearchResultsRest();
         resultsRest.setProjection(projection);
@@ -74,21 +77,33 @@ public class DiscoverResultConverter {
     }
 
     private void addSearchResults(final DiscoverResult searchResult, final SearchResultsRest resultsRest,
-                                  final Projection projection) {
+            final Projection projection) {
         for (IndexableObject dspaceObject : CollectionUtils.emptyIfNull(searchResult.getIndexableObjects())) {
             SearchResultEntryRest resultEntry = new SearchResultEntryRest();
             resultEntry.setProjection(projection);
 
-            //Convert the DSpace Object to its REST model
+            // Convert the DSpace Object to its REST model
             resultEntry.setIndexableObject(convertDSpaceObject(dspaceObject, projection));
 
-            //Add hit highlighting for this DSO if present
+            // Add hit highlighting for this DSO if present
             DiscoverResult.IndexableObjectHighlightResult highlightedResults = searchResult
-                .getHighlightedResults(dspaceObject);
+                    .getHighlightedResults(dspaceObject);
             if (highlightedResults != null && MapUtils.isNotEmpty(highlightedResults.getHighlightResults())) {
                 for (Map.Entry<String, List<String>> metadataHighlight : highlightedResults.getHighlightResults()
-                                                                                           .entrySet()) {
+                        .entrySet()) {
                     resultEntry.addHitHighlights(metadataHighlight.getKey(), metadataHighlight.getValue());
+                }
+            }
+
+            List<DiscoverResult.SearchDocument> searchDocuments = searchResult.getSearchDocument(dspaceObject);
+            if (CollectionUtils.isNotEmpty(searchDocuments)
+                    && CollectionUtils.isNotEmpty(searchDocuments.get(0).getSearchFieldValues(SCORE_FIELD))) {
+                String scoreValue = searchDocuments.get(0).getSearchFieldValues(SCORE_FIELD).get(0);
+                try {
+                    resultEntry.setScore(Double.valueOf(scoreValue));
+                } catch (NumberFormatException e) {
+                    log.debug("Unable to parse search score '{}' for object {}", scoreValue,
+                            dspaceObject.getUniqueIndexID());
                 }
             }
 
@@ -97,14 +112,14 @@ public class DiscoverResultConverter {
     }
 
     private RestAddressableModel convertDSpaceObject(final IndexableObject indexableObject,
-                                                     final Projection projection) {
+            final Projection projection) {
         return converter.toRest(indexableObject.getIndexedObject(), projection);
     }
 
     private void setRequestInformation(final Context context, final String query, final List<String> dsoTypes,
-                                       final String configurationName, final String scope,
-                                       final List<SearchFilter> searchFilters, final Pageable page,
-                                       final SearchResultsRest resultsRest) {
+            final String configurationName, final String scope,
+            final List<SearchFilter> searchFilters, final Pageable page,
+            final SearchResultsRest resultsRest) {
         resultsRest.setQuery(query);
         resultsRest.setConfiguration(configurationName);
         resultsRest.setDsoTypes(dsoTypes);
