@@ -147,6 +147,7 @@ public class EmbeddingService implements InitializingBean {
         int expectedDimension = configurationService.getIntProperty(VECTOR_DIMENSION, DEFAULT_VECTOR_DIMENSION);
         if (expectedDimension > 0 && vector.size() != expectedDimension) {
             log.warn("Embedding size mismatch. Expected={}, got={}", expectedDimension, vector.size());
+            return List.of();
         }
 
         return vector;

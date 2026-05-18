@@ -69,10 +69,7 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
             }
 
             String vectorField = configurationService.getProperty(VECTOR_FIELD_PROPERTY, DEFAULT_VECTOR_FIELD);
-
-            for (Float value : vector) {
-                document.addField(vectorField, value);
-            }
+            document.setField(vectorField, vector);
         } catch (Exception e) {
             // Keep lexical indexing resilient when embeddings are unavailable.
             log.error("Error while generating embedding for item {}", item.getID(), e);

@@ -31,6 +31,7 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
     private static final String VECTOR_FIELD_PROPERTY = "embeddings.search.vectorField";
     private static final String DEFAULT_VECTOR_FIELD = "vector";
     private static final String SCORE_FIELD = "score";
+    private static final String HIGHLIGHT_QUERY_PARAM = "hl.q";
     private static final String QUERY_PARSER_KNN = "knn";
     private static final String QUERY_PARSER_VECTOR_SIMILARITY = "vectorSimilarity";
 
@@ -81,6 +82,7 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
                 discoveryQuery.addSearchField(SCORE_FIELD);
             }
             solrQuery.addField(SCORE_FIELD);
+            solrQuery.set(HIGHLIGHT_QUERY_PARAM, textQuery);
 
             solrQuery.setQuery(vectorQuery);
         } catch (Exception e) {
@@ -90,7 +92,7 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
     }
 
     private String buildVectorQuery(String queryParser, String vectorField, int topK,
-                                    double minReturn, String vectorPayload) {
+            double minReturn, String vectorPayload) {
         if (QUERY_PARSER_VECTOR_SIMILARITY.equalsIgnoreCase(queryParser)) {
             return "{!vectorSimilarity f=" + vectorField + " minReturn=" + minReturn + "}["
                     + vectorPayload + "]";
