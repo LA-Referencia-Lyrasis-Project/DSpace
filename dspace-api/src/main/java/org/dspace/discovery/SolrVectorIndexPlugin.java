@@ -29,6 +29,8 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
 
     private static final String VECTOR_FIELD_PROPERTY = "embeddings.search.vectorField";
     private static final String DEFAULT_VECTOR_FIELD = "vector";
+    private static final String VECTOR_SOURCE_METADATA_FIELD_PROPERTY = "embeddings.indexing.metadataField";
+    private static final String DEFAULT_VECTOR_SOURCE_METADATA_FIELD = "dc.title";
     private static final String SEMANTIC_SEARCH_ENABLED_PROPERTY = "semantic.search.enabled";
 
     @Autowired(required = true)
@@ -52,13 +54,16 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
         }
 
         Item item = ((IndexableItem) indexableObject).getIndexedObject();
-        String title = itemService.getMetadataFirstValue(item, "dc", "title", null, Item.ANY);
-        if (StringUtils.isBlank(title)) {
+        String sourceMetadataField = configurationService.getProperty(
+                VECTOR_SOURCE_METADATA_FIELD_PROPERTY,
+                DEFAULT_VECTOR_SOURCE_METADATA_FIELD);
+        String textToVectorize = getMetadataValue(item, sourceMetadataField);
+        if (StringUtils.isBlank(textToVectorize)) {
             return;
         }
 
         try {
-            List<Float> vector = embeddingService.getVectorFromAPIForIndexing(title);
+            List<Float> vector = embeddingService.getVectorFromAPIForIndexing(textToVectorize);
             if (vector.isEmpty()) {
                 return;
             }
@@ -72,5 +77,20 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
             // Keep lexical indexing resilient when embeddings are unavailable.
             log.error("Error while generating embedding for item {}", item.getID(), e);
         }
+    }
+
+    private String getMetadataValue(Item item, String metadataField) {
+        String[] parts = StringUtils.defaultString(metadataField).split("\\.");
+        if (parts.length < 2 || parts.length > 3) {
+            log.warn("Invalid {} value '{}', falling back to {}", VECTOR_SOURCE_METADATA_FIELD_PROPERTY,
+                    metadataField, DEFAULT_VECTOR_SOURCE_METADATA_FIELD);
+            return itemService.getMetadataFirstValue(item, "dc", "title", null, Item.ANY);
+        }
+
+        String schema = parts[0];
+        String element = parts[1];
+        String qualifier = parts.length == 3 ? parts[2] : null;
+
+        return itemService.getMetadataFirstValue(item, schema, element, qualifier, Item.ANY);
     }
 }
