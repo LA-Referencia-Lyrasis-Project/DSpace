@@ -28,6 +28,7 @@
 <schema name="discovery" version="1.5">
 
   <types>
+    <fieldType name="knn_vector" class="solr.DenseVectorField" vectorDimension="1024" similarityFunction="dot_product" knnAlgorithm="hnsw" />
     <fieldType name="string" class="solr.StrField" sortMissingLast="true" omitNorms="true"/>
 
     <fieldType name="boolean" class="solr.BoolField" sortMissingLast="true" omitNorms="true"/>
@@ -239,12 +240,20 @@
             <filter class="solr.RemoveDuplicatesTokenFilterFactory"/>
         </analyzer>
     </fieldType>
+
+    <fieldType name="_nest_path_" class="solr.NestPathField" />
  </types>
 
 
  <fields>
 
  	<field name="_version_" type="long" indexed="true" stored="true" multiValued="false"/>
+
+    <field name="_root_" type="string" indexed="true" stored="false" docValues="false" />
+    <field name="_nest_path_" type="_nest_path_" indexed="true" stored="true" />
+
+    <field name="vector" type="knn_vector" indexed="true" stored="false" />
+    <field name="vector_multivalued" type="knn_vector" indexed="true" stored="false" multiValued="true" />
 
     <!-- catchall field, containing all other searchable text fields (implemented
         via copyField further on in this schema  -->
@@ -253,13 +262,13 @@
     <field name="fulltext" type="text" indexed="true" stored="true" multiValued="true"/>
 
     <!-- Internal DSpace Object ID -->
-    <field name="search.resourceid" type="string" indexed="true" stored="true" required="true" omitNorms="true" />
+    <field name="search.resourceid" type="string" indexed="true" stored="true" required="false" omitNorms="true" />
 
     <!-- Internal DSpaceObject Type ID -->
-    <field name="search.resourcetype" type="string" indexed="true" stored="true" required="true" omitNorms="true" />
+    <field name="search.resourcetype" type="string" indexed="true" stored="true" required="false" omitNorms="true" />
 
     <!-- All object placed in Discovery must have an unique id (for standard DSpaceObject it is resourceID-resourceTypeID) -->
-    <field name="search.uniqueid" type="string" indexed="true" stored="true" required="true" omitNorms="true" docValues="true"/>
+    <field name="search.uniqueid" type="string" indexed="true" stored="true" required="false" omitNorms="true" docValues="true"/>
 
     <!-- All Items/Communities/Collections placed in Discovery should have an handle -->
     <field name="handle" type="string" indexed="true" stored="true" omitNorms="true" docValues="true" />
@@ -269,7 +278,6 @@
     <field name="discoverable" type="string" indexed="true" stored="true" omitNorms="true" docValues="true" />
 
     <field name="read" type="string" indexed="true" stored="true" omitNorms="true" multiValued="true" docValues="true" />
-    <field name="admin" type="string" indexed="true" stored="true" omitNorms="true" multiValued="true" docValues="true" />
 
     <!-- used to track who submitted an item -->
     <field name="submitter" type="string" indexed="true" stored="true" omitNorms="true" multiValued="true" docValues="true" />
@@ -294,7 +302,7 @@
     <field name="location.comm" type="lowerCaseSort" indexed="true" stored="true" multiValued="true" required="false" omitNorms="true" />
     <field name="location.coll" type="lowerCaseSort" indexed="true" stored="true" multiValued="true" required="false" omitNorms="true" />
     <field name="location.parent" type="lowerCaseSort" indexed="true" stored="true" multiValued="false" required="false" omitNorms="true" />
-
+  
     <field name="a_spell" type="textSpell" />
     <copyField source="fulltext" dest="a_spell" />
     <copyField source="fulltext" dest="fulltext_hl" />
@@ -302,6 +310,7 @@
     <!-- used by the DSpace Discovery Solr Indexer to track the last time a document was indexed -->
     <field name="SolrIndexer.lastIndexed" type="date" indexed="true" stored="true" default="NOW" multiValued="false" omitNorms="true" />
     <field name="lastModified" type="date" indexed="true" stored="true" default="NOW" multiValued="false" omitNorms="true" />
+    <copyField source="lastModified" dest="lastModified_dt" />
 
     <!-- used to filter out items that are older versions of another item -->
     <field name="latestVersion" type="boolean" indexed="true" stored="true" default="true" multiValued="false" omitNorms="true"/>
@@ -349,7 +358,7 @@
 
     <!-- Leftovers from sample schema.  Are these used? -->
     <dynamicField name="*_i"   type="int"     indexed="true" stored="true" docValues="true"/>
-    <dynamicField name="*_s"   type="string"  indexed="true" stored="true" docValues="true" multiValued="true"/>
+    <dynamicField name="*_s"   type="string"  indexed="true" stored="true" docValues="true"/>
     <dynamicField name="*_l"   type="long"    indexed="true" stored="true" docValues="true"/>
     <dynamicField name="*_t"   type="text"    indexed="true" stored="true" />
     <dynamicField name="*_b"   type="boolean" indexed="true" stored="true" />
@@ -367,13 +376,6 @@
     <dynamicField name="attr_*" type="textgen" indexed="true" stored="true" multiValued="true"/>
 
     <dynamicField name="random_*" type="random" />
-
-    <!-- Item authority lookup -->
-     <field name="itemauthoritylookup" type="itemLookup" indexed="true" stored="true" multiValued="true"/>
-     <field name="itemauthoritylookupexactmatch" type="text" indexed="true" stored="true" multiValued="true"/>
-
-    <field name="customurl" type="string" indexed="true" stored="true" required="false" multiValued="true"/>
-
  </fields>
 
  <uniqueKey>search.uniqueid</uniqueKey>
@@ -383,9 +385,6 @@
         or to add multiple fields to the same field for easier/faster searching.  -->
 
  <copyField source="*" dest="search_text"/>
- <copyField source="lastModified" dest="lastModified_dt" />
- <copyField source="title" dest="itemauthoritylookup"/>
- <copyField source="title" dest="itemauthoritylookupexactmatch"/>
  <copyField source="dspace.entity.type" dest="search.entitytype"/>
 
 </schema>

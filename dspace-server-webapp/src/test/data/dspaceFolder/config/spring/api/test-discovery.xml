@@ -45,6 +45,8 @@
     <bean id="solrServiceBestMatchStrictIndexingPlugin"
         class="org.dspace.discovery.SolrServiceStrictBestMatchIndexingPlugin" />
     <bean id="embeddingService" class="org.dspace.discovery.EmbeddingService" />
+    <bean id="embeddingApiClient" class="org.dspace.discovery.embedding.EmbeddingApiClient"/>
+    <bean id="chunkingService" class="org.dspace.discovery.embedding.ChunkingService"/>
     <bean id="solrVectorIndexPlugin" class="org.dspace.discovery.SolrVectorIndexPlugin"
         scope="prototype" />
     <bean id="solrSemanticSearchPlugin" class="org.dspace.discovery.SolrSemanticSearchPlugin"
