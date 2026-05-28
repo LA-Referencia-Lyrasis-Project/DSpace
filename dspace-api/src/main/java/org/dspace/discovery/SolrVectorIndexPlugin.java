@@ -85,8 +85,10 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
             String model = configurationService.getProperty(MODEL_INDEXING_PROPERTY);
             boolean solrMultiVectors = configurationService.getBooleanProperty(SOLR_MULTI_VECTORS_PROPERTY, false);
 
+            log.info("Indexing solr multi vector: {}", solrMultiVectors);
+
             if (!solrMultiVectors) {
-                List<Float> vector = embeddingService.embed(title, apiUrl, model);
+                List<Float> vector = embeddingService.embed(chunkingService.normalizeText(title), apiUrl, model);
                 if (vector.isEmpty()) {
                     return;
                 }

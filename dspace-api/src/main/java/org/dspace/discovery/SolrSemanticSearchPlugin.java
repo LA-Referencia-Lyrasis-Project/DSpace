@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.dspace.core.Context;
+import org.dspace.discovery.embedding.ChunkingService;
 import org.dspace.discovery.embedding.EmbeddingService;
 import org.dspace.services.ConfigurationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,9 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
     @Autowired(required = true)
     private ConfigurationService configurationService;
 
+    @Autowired(required = true)
+    private ChunkingService chunkingService;
+
     @Override
     public void additionalSearchParameters(Context context, DiscoverQuery discoveryQuery, SolrQuery solrQuery)
             throws SearchServiceException {
@@ -64,7 +68,7 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
             return;
         }
 
-        String textQuery = solrQuery.getQuery();
+        String textQuery = chunkingService.normalizeText(solrQuery.getQuery());
         if (StringUtils.isBlank(textQuery) || "*:*".equals(textQuery)) {
             return;
         }
@@ -96,7 +100,8 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
                             vectorPayload)
                     : buildVectorQuery(effectiveQueryParser, vectorField, topK, minReturn, vectorPayload);
 
-            log.info("Executing semantic search using query parser '{}'", effectiveQueryParser);
+            log.info("Executing semantic search using query parser '{}' for solr multi vectors {}",
+                    effectiveQueryParser, solrMultiVectors);
 
             if (!discoveryQuery.getSearchFields().contains(SCORE_FIELD)) {
                 discoveryQuery.addSearchField(SCORE_FIELD);
