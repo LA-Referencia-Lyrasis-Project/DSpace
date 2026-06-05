@@ -37,6 +37,7 @@ import org.apache.commons.lang3.Strings;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.request.json.DirectJsonQueryRequest;
 import org.apache.solr.client.solrj.response.FacetField;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.json.BucketBasedJsonFacet;
@@ -48,9 +49,11 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.FacetParams;
 import org.apache.solr.common.params.HighlightParams;
+import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.MoreLikeThisParams;
 import org.apache.solr.common.params.SpellingParams;
 import org.apache.solr.common.util.NamedList;
+import org.apache.solr.common.util.Utils;
 import org.dspace.authorize.ResourcePolicy;
 import org.dspace.authorize.factory.AuthorizeServiceFactory;
 import org.dspace.content.Collection;
@@ -1002,8 +1005,8 @@ public class SolrServiceImpl implements SearchService, IndexingService {
             boolean skipLoadingResponse = false;
             // use zombieDocs to collect stale found objects
             List<String> zombieDocs = new ArrayList<>();
-            QueryResponse solrQueryResponse = solrSearchCore.getSolr().query(solrQuery,
-                          solrSearchCore.REQUEST_METHOD);
+            QueryResponse solrQueryResponse = executeSearchQuery(solrQuery);
+            logSolrDebugResponse(solrQueryResponse);
             if (solrQueryResponse != null) {
                 result.setSearchTime(solrQueryResponse.getQTime());
                 result.setStart(query.getStart());
@@ -1090,6 +1093,36 @@ public class SolrServiceImpl implements SearchService, IndexingService {
             throw new RuntimeException(message);
         }
         return result;
+    }
+
+    private void logSolrDebugResponse(QueryResponse solrQueryResponse) {
+        if (solrQueryResponse != null && solrQueryResponse.getDebugMap() != null) {
+            Object combinerExplanations = solrQueryResponse.getDebugMap().get("combinerExplanations");
+            if (combinerExplanations != null) {
+                log.info("Solr combiner explanations: {}", Utils.toJSONString(combinerExplanations));
+            }
+        }
+    }
+
+    private QueryResponse executeSearchQuery(SolrQuery solrQuery) throws SolrServerException, IOException {
+        if (!Boolean.parseBoolean(solrQuery.get(SolrHybridSearchPlugin.HYBRID_SEARCH_REQUEST_PARAM))) {
+            return solrSearchCore.getSolr().query(solrQuery, solrSearchCore.REQUEST_METHOD);
+        }
+
+        String hybridSearchJson = solrQuery.get(SolrHybridSearchPlugin.HYBRID_SEARCH_JSON_PARAM);
+        ModifiableSolrParams params = new ModifiableSolrParams(solrQuery);
+        params.remove(SolrHybridSearchPlugin.HYBRID_SEARCH_REQUEST_PARAM);
+        params.remove(SolrHybridSearchPlugin.HYBRID_SEARCH_JSON_PARAM);
+        params.remove("q");
+        params.remove("rows");
+        params.remove("start");
+        params.remove("fl");
+
+        DirectJsonQueryRequest request = new DirectJsonQueryRequest(hybridSearchJson, params);
+        request.setMethod(solrSearchCore.REQUEST_METHOD);
+        request.setPath("/combined");
+
+        return request.process(solrSearchCore.getSolr());
     }
 
     /**

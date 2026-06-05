@@ -12,8 +12,8 @@ Semantic search adds embedding-based indexing and querying on top of Discovery.
 2. Semantic mode generates embeddings and executes vector queries in Solr.
 3. Discovery results expose `score` in REST so UI can sort/render relevance.
 4. Two runtime modes are supported:
-   - Single vector per item: `embeddings.solrMultiVectors=false`
-   - MultiVectors (nested child vectors): `embeddings.solrMultiVectors=true`
+   - Single vector per item: `embeddings.solr.multi.vectors=false`
+   - MultiVectors (nested child vectors): `embeddings.solr.multi.vectors=true`
 
 ## Backend Runtime Flow
 
@@ -25,14 +25,14 @@ Semantic search adds embedding-based indexing and querying on top of Discovery.
 
 ### Mode-specific behavior
 
-1. Single-vector mode (`embeddings.solrMultiVectors=false`)
+1. Single-vector mode (`embeddings.solr.multi.vectors=false`)
    - Indexes only title text.
-   - Stores one vector in `embeddings.solrVectorField`.
-   - Searches in `embeddings.solrVectorField`.
+   - Stores one vector in `embeddings.solr.vector.field`.
+   - Searches in `embeddings.solr.vector.field `.
 
-2. MultiVectors mode (`embeddings.solrMultiVectors=true`)
+2. MultiVectors mode (`embeddings.solr.multi.vectors=true`)
    - Indexes title plus abstract chunks.
-   - Stores vectors in `embeddings.solrVectorFieldMultiValued`.
+   - Stores vectors in `embeddings.solr.vector.field`.
    - Searches child vectors and returns parents through Solr parent/child query.
 
 ## Configuration Keys
@@ -42,8 +42,8 @@ Defined in `dspace/config/modules/embeddings.cfg`:
 1. `semantic.search.enabled`
 2. `embeddings.api.url.indexing`
 3. `embeddings.model.indexing`
-4. `embeddings.indexing.titleField`
-5. `embeddings.indexing.descriptionField`
+4. `embeddings.indexing.title.field`
+5. `embeddings.indexing.description.field`
 6. `embeddings.api.url.search`
 7. `embeddings.model.search`
 8. `embeddings.api.url` (legacy fallback)
@@ -55,14 +55,14 @@ Defined in `dspace/config/modules/embeddings.cfg`:
 14. `embeddings.max.chunks.size`
 15. `embeddings.vector.dimension`
 16. `embeddings.api.timeout.ms`
-17. `embeddings.api.retry.maxAttempts`
+17. `embeddings.api.retry.max.attempts`
 18. `embeddings.api.retry.delay.ms`
 19. `embeddings.search.topK` (used by `knn`)
-20. `embeddings.solrVectorField`
-21. `embeddings.solrVectorFieldMultiValued`
-22. `embeddings.solrMultiVectors`
-23. `embeddings.search.queryParser` (`knn` or `vectorSimilarity`)
-24. `embeddings.search.minReturn` (used by `vectorSimilarity`)
+20. `embeddings.solr.vector.field `
+21. `embeddings.solr.vector.field MultiValued`
+22. `embeddings.solr.multi.vectors`
+23. `embeddings.search.query.parser` (`knn` or `vectorSimilarity`)
+24. `embeddings.search.min.return` (used by `vectorSimilarity`)
 
 Additional config wiring:
 
@@ -78,7 +78,7 @@ Always required:
 1. `DenseVectorField` type (`knn_vector`)
 2. Single-vector field `vector`
 
-Required only when `embeddings.solrMultiVectors=true`:
+Required only when `embeddings.solr.multi.vectors=true`:
 
 1. Nested support (`_nest_path_` and `_root_`)
 2. Multi-valued vector field (`vector_multivalued`)

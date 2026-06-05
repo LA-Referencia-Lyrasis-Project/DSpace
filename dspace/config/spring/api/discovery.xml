@@ -72,6 +72,8 @@
         scope="prototype"/>
     <bean id="solrSemanticSearchPlugin" class="org.dspace.discovery.SolrSemanticSearchPlugin"
         scope="prototype"/>
+    <bean id="solrHybridSearchPlugin" class="org.dspace.discovery.SolrHybridSearchPlugin"
+        scope="prototype"/>
     <bean id="embeddingService" class="org.dspace.discovery.embedding.EmbeddingService"/>
     <bean id="embeddingApiClient" class="org.dspace.discovery.embedding.EmbeddingApiClient"
         autowire-candidate="true"/>

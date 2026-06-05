@@ -28,7 +28,6 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
     private static final Logger log = LogManager.getLogger(SolrSemanticSearchPlugin.class);
 
     private static final String SOLR_DEFAULT_VECTOR_FIELD = "vector";
-    private static final String SOLR_DEFAULT_MULTIVALUED_VECTOR_FIELD = "vector_multivalued";
     private static final String SEARCH_TYPE_PROPERTY = "searchType";
     private static final String SEARCH_TYPE_SEMANTIC = "semantic";
     private static final String QUERY_PARSER_KNN = "knn";
@@ -40,9 +39,8 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
     private static final String PARENT_WHICH_QUERY = "*:* -_nest_path_:*";
 
     private static final String SEMANTIC_SEARCH_ENABLED_PROPERTY = "semantic.search.enabled";
-    private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solrMultiVectors";
-    private static final String SOLR_VECTOR_FIELD_PROPERTY = "embeddings.solrVectorField";
-    private static final String SOLR_MULTIVALUED_VECTOR_FIELD_PROPERTY = "embeddings.solrVectorFieldMultiValued";
+    private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solr.multi.vectors";
+    private static final String SOLR_VECTOR_FIELD_PROPERTY = "embeddings.solr.vector.field";
     private static final String API_URL_SEARCH_PROPERTY = "embeddings.api.url.search";
     private static final String MODEL_SEARCH_PROPERTY = "embeddings.model.search";
 
@@ -83,17 +81,13 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
             }
 
             String queryParser = configurationService
-                    .getProperty("embeddings.search.queryParser", QUERY_PARSER_KNN);
+                    .getProperty("embeddings.search.query.parser", QUERY_PARSER_KNN);
             String effectiveQueryParser = resolveQueryParser(queryParser);
             boolean solrMultiVectors = configurationService.getBooleanProperty(SOLR_MULTI_VECTORS_PROPERTY, false);
-            String vectorField = solrMultiVectors
-                    ? configurationService.getProperty(
-                            SOLR_MULTIVALUED_VECTOR_FIELD_PROPERTY,
-                            SOLR_DEFAULT_MULTIVALUED_VECTOR_FIELD)
-                    : configurationService.getProperty(SOLR_VECTOR_FIELD_PROPERTY, SOLR_DEFAULT_VECTOR_FIELD);
+            String vectorField = configurationService.getProperty(SOLR_VECTOR_FIELD_PROPERTY, SOLR_DEFAULT_VECTOR_FIELD);
             int topK = configurationService.getIntProperty("embeddings.search.topK", 10);
             double minReturn = configurationService.getPropertyAsType(
-                    "embeddings.search.minReturn", 0.7d);
+                    "embeddings.search.min.return", 0.7d);
             String vectorPayload = vector.stream().map(String::valueOf).collect(Collectors.joining(","));
             String vectorQuery = solrMultiVectors
                     ? buildNestedMultiVectorQuery(solrQuery, effectiveQueryParser, vectorField, topK, minReturn,
@@ -152,7 +146,7 @@ public class SolrSemanticSearchPlugin implements SolrServiceSearchPlugin {
             return QUERY_PARSER_KNN;
         }
 
-        log.warn("Missing/Invalid embeddings.search.queryParser, falling back to '{}'", QUERY_PARSER_KNN);
+        log.warn("Missing/Invalid embeddings.search.query.parser, falling back to '{}'", QUERY_PARSER_KNN);
 
         return QUERY_PARSER_KNN;
     }

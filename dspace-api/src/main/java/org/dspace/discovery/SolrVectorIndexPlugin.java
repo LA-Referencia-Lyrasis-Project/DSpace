@@ -31,16 +31,14 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
     private static final Logger log = LogManager.getLogger(SolrVectorIndexPlugin.class);
 
     private static final String DEFAULT_SOLR_VECTOR_FIELD = "vector";
-    private static final String DEFAULT_SOLR_MULTIVALUED_VECTOR_FIELD = "vector_multivalued";
     private static final String DEFAULT_VECTOR_TITLE_FIELD = "dc.title";
     private static final String DEFAULT_VECTOR_DESCRIPTION_FIELD = "dc.description.abstract";
 
     private static final String SEMANTIC_SEARCH_ENABLED_PROPERTY = "semantic.search.enabled";
-    private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solrMultiVectors";
-    private static final String SOLR_VECTOR_FIELD = "embeddings.solrVectorField";
-    private static final String SOLR_MULTIVALUED_VECTOR_FIELD = "embeddings.solrVectorFieldMultiValued";
-    private static final String VECTOR_SOURCE_TITLE_FIELD_PROPERTY = "embeddings.indexing.titleField";
-    private static final String VECTOR_SOURCE_DESCRIPTION_FIELD_PROPERTY = "embeddings.indexing.descriptionField";
+    private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solr.multi.vectors";
+    private static final String SOLR_VECTOR_FIELD = "embeddings.solr.vector.field";
+    private static final String VECTOR_SOURCE_TITLE_FIELD_PROPERTY = "embeddings.indexing.title.field";
+    private static final String VECTOR_SOURCE_DESCRIPTION_FIELD_PROPERTY = "embeddings.indexing.description.field";
     private static final String API_URL_INDEXING_PROPERTY = "embeddings.api.url.indexing";
     private static final String MODEL_INDEXING_PROPERTY = "embeddings.model.indexing";
 
@@ -87,13 +85,14 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
 
             log.info("Indexing solr multi vector: {}", solrMultiVectors);
 
+            String vectorField = configurationService.getProperty(SOLR_VECTOR_FIELD, DEFAULT_SOLR_VECTOR_FIELD);
+
             if (!solrMultiVectors) {
                 List<Float> vector = embeddingService.embed(chunkingService.normalizeText(title), apiUrl, model);
                 if (vector.isEmpty()) {
                     return;
                 }
 
-                String vectorField = configurationService.getProperty(SOLR_VECTOR_FIELD, DEFAULT_SOLR_VECTOR_FIELD);
                 document.setField(vectorField, vector);
             } else {
                 List<String> textsToVectorize = new ArrayList<>();
@@ -109,10 +108,6 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
                 if (vectors.isEmpty()) {
                     return;
                 }
-
-                String vectorField = configurationService.getProperty(
-                        SOLR_MULTIVALUED_VECTOR_FIELD,
-                        DEFAULT_SOLR_MULTIVALUED_VECTOR_FIELD);
                 document.setField(vectorField, vectors);
             }
         } catch (Exception e) {

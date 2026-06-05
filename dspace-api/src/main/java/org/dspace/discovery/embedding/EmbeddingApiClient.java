@@ -42,7 +42,7 @@ public class EmbeddingApiClient implements InitializingBean {
     private static final String MODEL = "embeddings.model";
     private static final String ENCODING_FORMAT = "embeddings.encoding_format";
     private static final String TIMEOUT_MS = "embeddings.api.timeout.ms";
-    private static final String RETRY_MAX_ATTEMPTS = "embeddings.api.retry.maxAttempts";
+    private static final String RETRY_MAX_ATTEMPTS = "embeddings.api.retry.max.attempts";
     private static final String RETRY_DELAY_MS = "embeddings.api.retry.delay.ms";
     private static final String VECTOR_DIMENSION = "embeddings.vector.dimension";
 

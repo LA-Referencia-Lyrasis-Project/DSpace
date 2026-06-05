@@ -4,8 +4,8 @@
 
 Document Solr schema requirements for semantic search in DSpace, with explicit separation between:
 
-- Single-vector mode (`embeddings.solrMultiVectors=false`): one vector per item
-- MultiVectors mode (`embeddings.solrMultiVectors=true`): nested child vectors per item
+- Single-vector mode (`embeddings.solr.multi.vectors=false`): one vector per item
+- MultiVectors mode (`embeddings.solr.multi.vectors=true`): nested child vectors per item
 
 ## Schema Changes Always Required
 
@@ -23,7 +23,7 @@ Document Solr schema requirements for semantic search in DSpace, with explicit s
 
 ## Additional Schema Changes Only for MultiVectors
 
-Apply this section only when `embeddings.solrMultiVectors=true`.
+Apply this section only when `embeddings.solr.multi.vectors=true`.
 
 ### 1. Nested document field type
 
@@ -64,16 +64,16 @@ Because `search.uniqueid` is `type="string"`, `_root_` must also be `type="strin
 
 ## Query Behavior (Current Implementation)
 
-### Single-vector mode (`embeddings.solrMultiVectors=false`)
+### Single-vector mode (`embeddings.solr.multi.vectors=false`)
 
-- Search field: `embeddings.solrVectorField` (default `vector`)
+- Search field: `embeddings.solr.vector.field` (default `vector`)
 - Query parser options:
   - `knn`: `{!knn f=vector topK=N}[...]`
   - `vectorSimilarity`: `{!vectorSimilarity f=vector minReturn=X}[...]`
 
-### Multi-vector mode (`embeddings.solrMultiVectors=true`)
+### Multi-vector mode (`embeddings.solr.multi.vectors=true`)
 
-- Search field: `embeddings.solrVectorFieldMultiValued` (default `vector_multivalued`)
+- Search field: `embeddings.solr.vector.fieldMultiValued` (default `vector_multivalued`)
 - Parent/child query strategy:
   - Set `allParents=*:* -_nest_path_:*`
   - Build child query (KNN or vectorSimilarity)
