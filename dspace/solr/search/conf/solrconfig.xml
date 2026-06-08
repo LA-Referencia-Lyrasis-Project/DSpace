@@ -137,11 +137,12 @@
 
     <requestHandler name="/combined" class="solr.CombinedQuerySearchHandler">
         <lst name="defaults">
-            <str name="df">allfields</str>
+            <str name="df">search_text</str>
+            <str name="q.op">AND</str>
             <str name="echoParams">explicit</str>
         </lst>
         <arr name="last-components">
-            <str>highlight</str>
+            <str>spellcheck</str>
         </arr>
     </requestHandler>
 
