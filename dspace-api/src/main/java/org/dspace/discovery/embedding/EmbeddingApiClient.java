@@ -37,8 +37,6 @@ public class EmbeddingApiClient implements InitializingBean {
 
     private static final Logger log = LogManager.getLogger(EmbeddingApiClient.class);
 
-    private static final String API_URL = "embeddings.api.url";
-    private static final String API_KEY = "embeddings.api.key";
     private static final String MODEL = "embeddings.model";
     private static final String ENCODING_FORMAT = "embeddings.encoding_format";
     private static final String TIMEOUT_MS = "embeddings.api.timeout.ms";
@@ -68,14 +66,11 @@ public class EmbeddingApiClient implements InitializingBean {
                 .build();
     }
 
-    public List<List<Float>> callEmbeddingAPI(List<String> texts, String apiUrl, String model)
+    public List<List<Float>> callEmbeddingAPI(List<String> texts, String apiUrl, String model, String apiKey)
             throws IOException, InterruptedException {
 
         if (texts == null || texts.isEmpty()) {
             return Collections.emptyList();
-        }
-        if (StringUtils.isBlank(apiUrl)) {
-            apiUrl = configurationService.getProperty(API_URL);
         }
         if (StringUtils.isBlank(model)) {
             model = configurationService.getProperty(MODEL);
@@ -114,8 +109,6 @@ public class EmbeddingApiClient implements InitializingBean {
                 .timeout(Duration.ofMillis(timeoutMs))
                 .POST(HttpRequest.BodyPublishers.ofString(
                         objectMapper.writeValueAsString(requestPayload)));
-
-        String apiKey = configurationService.getProperty(API_KEY);
 
         if (StringUtils.isNotBlank(apiKey)) {
             requestBuilder.header("Authorization", "Bearer " + apiKey);

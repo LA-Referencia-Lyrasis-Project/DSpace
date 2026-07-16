@@ -8,13 +8,17 @@
 package org.dspace.discovery;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.common.SolrInputDocument;
 import org.dspace.content.Item;
+import org.dspace.content.MetadataValue;
 import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
 import org.dspace.discovery.embedding.ChunkingService;
@@ -32,15 +36,17 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
 
     private static final String DEFAULT_SOLR_VECTOR_FIELD = "vector";
     private static final String DEFAULT_VECTOR_TITLE_FIELD = "dc.title";
-    private static final String DEFAULT_VECTOR_DESCRIPTION_FIELD = "dc.description.abstract";
+    private static final String[] DEFAULT_VECTOR_ADDITIONAL_FIELDS =
+        new String[] {"dc.description.abstract"};
 
     private static final String SEMANTIC_SEARCH_ENABLED_PROPERTY = "semantic.search.enabled";
     private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solr.multi.vectors";
     private static final String SOLR_VECTOR_FIELD = "embeddings.solr.vector.field";
     private static final String VECTOR_SOURCE_TITLE_FIELD_PROPERTY = "embeddings.indexing.title.field";
-    private static final String VECTOR_SOURCE_DESCRIPTION_FIELD_PROPERTY = "embeddings.indexing.description.field";
+    private static final String VECTOR_SOURCE_ADDITIONAL_FIELDS_PROPERTY = "embeddings.indexing.additional.fields";
     private static final String API_URL_INDEXING_PROPERTY = "embeddings.api.url.indexing";
-    private static final String MODEL_INDEXING_PROPERTY = "embeddings.model.indexing";
+    private static final String API_KEY_INDEXING_PROPERTY = "embeddings.api.key.indexing";
+    private static final String MODEL_PROPERTY = "embeddings.model";
 
     @Autowired(required = true)
     private ItemService itemService;
@@ -69,8 +75,6 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
         Item item = ((IndexableItem) indexableObject).getIndexedObject();
         String titleField = configurationService.getProperty(VECTOR_SOURCE_TITLE_FIELD_PROPERTY,
                 DEFAULT_VECTOR_TITLE_FIELD);
-        String descriptionField = configurationService.getProperty(VECTOR_SOURCE_DESCRIPTION_FIELD_PROPERTY,
-                DEFAULT_VECTOR_DESCRIPTION_FIELD);
 
         String title = getMetadataValue(item, titleField, VECTOR_SOURCE_TITLE_FIELD_PROPERTY,
                 DEFAULT_VECTOR_TITLE_FIELD);
@@ -80,7 +84,8 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
 
         try {
             String apiUrl = configurationService.getProperty(API_URL_INDEXING_PROPERTY);
-            String model = configurationService.getProperty(MODEL_INDEXING_PROPERTY);
+            String model = configurationService.getProperty(MODEL_PROPERTY);
+            String apiKey = configurationService.getProperty(API_KEY_INDEXING_PROPERTY);
             boolean solrMultiVectors = configurationService.getBooleanProperty(SOLR_MULTI_VECTORS_PROPERTY, false);
 
             log.info("Indexing solr multi vector: {}", solrMultiVectors);
@@ -88,23 +93,27 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
             String vectorField = configurationService.getProperty(SOLR_VECTOR_FIELD, DEFAULT_SOLR_VECTOR_FIELD);
 
             if (!solrMultiVectors) {
-                List<Float> vector = embeddingService.embed(chunkingService.normalizeText(title), apiUrl, model);
+                List<Float> vector = embeddingService.embed(chunkingService.normalizeText(title), apiUrl, model,
+                    apiKey);
                 if (vector.isEmpty()) {
                     return;
                 }
 
                 document.setField(vectorField, vector);
             } else {
-                List<String> textsToVectorize = new ArrayList<>();
+                Set<String> textsToVectorize = new LinkedHashSet<>();
                 textsToVectorize.add(chunkingService.normalizeText(title));
 
-                String description = getMetadataValue(item, descriptionField,
-                        VECTOR_SOURCE_DESCRIPTION_FIELD_PROPERTY, DEFAULT_VECTOR_DESCRIPTION_FIELD);
-                if (StringUtils.isNotBlank(description)) {
-                    textsToVectorize.addAll(chunkingService.chunkTitleAndAbstract(title, description));
+                for (String metadataField : getAdditionalMetadataFields()) {
+                    textsToVectorize.addAll(getTextsToVectorize(item, metadataField, title));
                 }
 
-                List<List<Float>> vectors = embeddingService.embed(textsToVectorize, apiUrl, model);
+                if (textsToVectorize.isEmpty()) {
+                    return;
+                }
+
+                List<List<Float>> vectors = embeddingService.embed(new ArrayList<>(textsToVectorize), apiUrl, model,
+                    apiKey);
                 if (vectors.isEmpty()) {
                     return;
                 }
@@ -114,6 +123,52 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
             // Keep lexical indexing resilient when embeddings are unavailable.
             log.error("Error while generating embedding for item {}", item.getID(), e);
         }
+    }
+
+    private List<String> getAdditionalMetadataFields() {
+        String[] configuredFields = configurationService.getArrayProperty(
+            VECTOR_SOURCE_ADDITIONAL_FIELDS_PROPERTY,
+            DEFAULT_VECTOR_ADDITIONAL_FIELDS);
+
+        if (configuredFields == null || configuredFields.length == 0) {
+            return Arrays.asList(DEFAULT_VECTOR_ADDITIONAL_FIELDS);
+        }
+
+        return Arrays.stream(configuredFields)
+            .map(StringUtils::trim)
+            .filter(StringUtils::isNotBlank)
+            .toList();
+    }
+
+    private List<String> getTextsToVectorize(Item item, String metadataField, String title) {
+        List<MetadataValue> metadataValues = itemService.getMetadataByMetadataString(item, metadataField);
+        if (metadataValues == null || metadataValues.isEmpty()) {
+            return List.of();
+        }
+
+        StringBuilder concatenatedValues = new StringBuilder();
+        for (MetadataValue metadataValue : metadataValues) {
+            String value = metadataValue.getValue();
+            if (StringUtils.isBlank(value)) {
+                continue;
+            }
+
+            if (concatenatedValues.length() > 0) {
+                concatenatedValues.append(' ');
+            }
+            concatenatedValues.append(value);
+        }
+
+        if (concatenatedValues.length() == 0) {
+            return List.of();
+        }
+
+        String fieldContent = concatenatedValues.toString();
+        if (chunkingService.exceedsMaxSegmentSize(fieldContent)) {
+            return chunkingService.chunkText(fieldContent, title);
+        }
+
+        return List.of(chunkingService.normalizeText(fieldContent));
     }
 
     private String getMetadataValue(Item item, String metadataField, String propertyName, String defaultField) {

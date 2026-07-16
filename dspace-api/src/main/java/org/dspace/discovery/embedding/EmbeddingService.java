@@ -23,12 +23,13 @@ public class EmbeddingService {
     @Autowired(required = true)
     private EmbeddingApiClient embeddingApiClient;
 
-    public List<Float> embed(String text, String apiUrlProperty, String modelProperty)
+    public List<Float> embed(String text, String apiUrlProperty, String modelProperty, String apiKeyProperty)
             throws IOException, InterruptedException {
         List<List<Float>> embeddings = embeddingApiClient.callEmbeddingAPI(
                 List.of(text),
                 apiUrlProperty,
-                modelProperty);
+                modelProperty,
+                apiKeyProperty);
 
         if (embeddings.isEmpty()) {
             return Collections.emptyList();
@@ -38,9 +39,10 @@ public class EmbeddingService {
 
     }
 
-    public List<List<Float>> embed(List<String> texts, String apiUrlProperty, String modelProperty)
+    public List<List<Float>> embed(List<String> texts, String apiUrlProperty, String modelProperty,
+            String apiKeyProperty)
             throws IOException, InterruptedException {
-        return embeddingApiClient.callEmbeddingAPI(texts, apiUrlProperty, modelProperty);
+        return embeddingApiClient.callEmbeddingAPI(texts, apiUrlProperty, modelProperty, apiKeyProperty);
     }
 
 }

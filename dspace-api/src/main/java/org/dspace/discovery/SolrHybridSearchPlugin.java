@@ -46,7 +46,8 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
     private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solr.multi.vectors";
     private static final String SOLR_VECTOR_FIELD_PROPERTY = "embeddings.solr.vector.field";
     private static final String API_URL_SEARCH_PROPERTY = "embeddings.api.url.search";
-    private static final String MODEL_SEARCH_PROPERTY = "embeddings.model.search";
+    private static final String API_KEY_SEARCH_PROPERTY = "embeddings.api.key.search";
+    private static final String MODEL_PROPERTY = "embeddings.model";
 
     @Autowired(required = true)
     private EmbeddingService embeddingService;
@@ -77,9 +78,10 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
 
         try {
             String apiUrl = configurationService.getProperty(API_URL_SEARCH_PROPERTY);
-            String model = configurationService.getProperty(MODEL_SEARCH_PROPERTY);
+            String model = configurationService.getProperty(MODEL_PROPERTY);
+            String apiKey = configurationService.getProperty(API_KEY_SEARCH_PROPERTY);
 
-            List<Float> vector = embeddingService.embed(textQuery, apiUrl, model);
+            List<Float> vector = embeddingService.embed(textQuery, apiUrl, model, apiKey);
             if (vector.isEmpty()) {
                 return;
             }

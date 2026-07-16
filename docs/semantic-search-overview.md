@@ -31,7 +31,7 @@ Semantic search adds embedding-based indexing and querying on top of Discovery.
    - Searches in `embeddings.solr.vector.field `.
 
 2. MultiVectors mode (`embeddings.solr.multi.vectors=true`)
-   - Indexes title plus abstract chunks.
+   - Indexes title plus configured additional metadata fields.
    - Stores vectors in `embeddings.solr.vector.field`.
    - Searches child vectors and returns parents through Solr parent/child query.
 
@@ -41,28 +41,26 @@ Defined in `dspace/config/modules/embeddings.cfg`:
 
 1. `semantic.search.enabled`
 2. `embeddings.api.url.indexing`
-3. `embeddings.model.indexing`
+3. `embeddings.model`
 4. `embeddings.indexing.title.field`
-5. `embeddings.indexing.description.field`
+5. `embeddings.indexing.additional.fields`
 6. `embeddings.api.url.search`
-7. `embeddings.model.search`
-8. `embeddings.api.url` (legacy fallback)
-9. `embeddings.api.key`
-10. `embeddings.model` (legacy fallback)
-11. `embeddings.encoding_format`
-12. `embeddings.max.segment.size.tokens`
-13. `embeddings.max.overlap.size.tokens`
-14. `embeddings.max.chunks.size`
-15. `embeddings.vector.dimension`
-16. `embeddings.api.timeout.ms`
-17. `embeddings.api.retry.max.attempts`
-18. `embeddings.api.retry.delay.ms`
-19. `embeddings.search.topK` (used by `knn`)
-20. `embeddings.solr.vector.field `
-21. `embeddings.solr.vector.field MultiValued`
-22. `embeddings.solr.multi.vectors`
-23. `embeddings.search.query.parser` (`knn` or `vectorSimilarity`)
-24. `embeddings.search.min.return` (used by `vectorSimilarity`)
+7. `embeddings.api.key.indexing`
+8. `embeddings.api.key.search`
+9. `embeddings.encoding_format`
+10. `embeddings.max.segment.size.tokens`
+11. `embeddings.max.overlap.size.tokens`
+12. `embeddings.max.chunks.size`
+13. `embeddings.vector.dimension`
+14. `embeddings.api.timeout.ms`
+15. `embeddings.api.retry.max.attempts`
+16. `embeddings.api.retry.delay.ms`
+17. `embeddings.search.topK` (used by `knn`)
+18. `embeddings.solr.vector.field `
+19. `embeddings.solr.vector.field MultiValued`
+20. `embeddings.solr.multi.vectors`
+21. `embeddings.search.query.parser` (`knn` or `vectorSimilarity`)
+22. `embeddings.search.min.return` (used by `vectorSimilarity`)
 
 Additional config wiring:
 

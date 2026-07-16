@@ -16,6 +16,7 @@ import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.segment.TextSegment;
+import org.apache.commons.lang3.StringUtils;
 import org.dspace.services.ConfigurationService;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,11 +50,13 @@ public class ChunkingService implements InitializingBean {
     private ConfigurationService configurationService;
 
     private DocumentSplitter documentSplitter;
+    private CustomTokenCountEstimator tokenCountEstimator;
+    private int maxSegmentSizeTokens;
     private int maxChunksSize;
 
     @Override
     public void afterPropertiesSet() {
-        int maxChunkSize = configurationService.getIntProperty(
+        this.maxSegmentSizeTokens = configurationService.getIntProperty(
                 MAX_SEGMENT_SIZE_TOKENS,
                 DEFAULT_MAX_SEGMENT_SIZE_TOKENS);
 
@@ -65,11 +68,11 @@ public class ChunkingService implements InitializingBean {
                 MAX_CHUNKS_SIZE,
                 DEFAULT_MAX_CHUNKS_SIZE);
 
-        CustomTokenCountEstimator customTokenCountEstimator = new CustomTokenCountEstimator();
+        this.tokenCountEstimator = new CustomTokenCountEstimator();
         this.documentSplitter = DocumentSplitters.recursive(
-                maxChunkSize,
+            maxSegmentSizeTokens,
                 maxOverlapSize,
-                customTokenCountEstimator);
+            tokenCountEstimator);
     }
 
     /**
@@ -121,22 +124,34 @@ public class ChunkingService implements InitializingBean {
      * limited by {@code maxChunksSize}; returns an empty list for null or
      * blank title/abstract inputs
      */
-    public List<String> chunkTitleAndAbstract(String title, String abstractText) {
-        String normalizedTitle = normalizeText(title);
-        String normalizedAbstract = normalizeText(abstractText);
+    public List<String> chunkText(String text, String prefix) {
+        String normalizedPrefix = normalizeText(prefix);
+        String normalizedText = normalizeText(text);
 
-        if (normalizedTitle.isBlank() || normalizedAbstract.isBlank()) {
+        if (normalizedPrefix.isBlank() || normalizedText.isBlank()) {
             return List.of();
         }
 
-        List<TextSegment> segments = documentSplitter.split(Document.from(normalizedAbstract));
+        List<TextSegment> segments = documentSplitter.split(Document.from(normalizedText));
 
         return segments.stream()
                 .map(TextSegment::text)
                 .filter(fragment -> !fragment.isBlank())
                 .limit(maxChunksSize)
-                .map(fragment -> formatChunk(normalizedTitle, fragment))
+                .map(fragment -> formatChunk(normalizedPrefix, fragment))
                 .toList();
+    }
+
+    /**
+     * Checks whether the normalized text exceeds the configured segment size.
+     *
+     * @param input text to evaluate
+     * @return {@code true} when chunking is required for the configured limit
+     */
+    public boolean exceedsMaxSegmentSize(String input) {
+        String normalized = normalizeText(input);
+        return StringUtils.isNotBlank(normalized)
+            && tokenCountEstimator.estimateTokenCountInText(normalized) > maxSegmentSizeTokens;
     }
 
     /**
