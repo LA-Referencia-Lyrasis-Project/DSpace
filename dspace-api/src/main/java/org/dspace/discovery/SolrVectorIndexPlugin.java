@@ -34,19 +34,12 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
 
     private static final Logger log = LogManager.getLogger(SolrVectorIndexPlugin.class);
 
-    private static final String DEFAULT_SOLR_VECTOR_FIELD = "vector";
     private static final String DEFAULT_VECTOR_TITLE_FIELD = "dc.title";
     private static final String[] DEFAULT_VECTOR_ADDITIONAL_FIELDS =
         new String[] {"dc.description.abstract"};
 
-    private static final String SEMANTIC_SEARCH_ENABLED_PROPERTY = "semantic.search.enabled";
-    private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solr.multi.vectors";
-    private static final String SOLR_VECTOR_FIELD = "embeddings.solr.vector.field";
     private static final String VECTOR_SOURCE_TITLE_FIELD_PROPERTY = "embeddings.indexing.title.field";
     private static final String VECTOR_SOURCE_ADDITIONAL_FIELDS_PROPERTY = "embeddings.indexing.additional.fields";
-    private static final String API_URL_INDEXING_PROPERTY = "embeddings.api.url.indexing";
-    private static final String API_KEY_INDEXING_PROPERTY = "embeddings.api.key.indexing";
-    private static final String MODEL_PROPERTY = "embeddings.model";
 
     @Autowired(required = true)
     private ItemService itemService;
@@ -64,7 +57,7 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
     @SuppressWarnings("rawtypes")
     public void additionalIndex(Context context, IndexableObject indexableObject, SolrInputDocument document) {
         log.info("Processing {} for vector indexing", indexableObject.getID());
-        if (!configurationService.getBooleanProperty(SEMANTIC_SEARCH_ENABLED_PROPERTY, false)) {
+        if (!configurationService.getBooleanProperty(VectorConstants.SEMANTIC_SEARCH_ENABLED_PROPERTY, false)) {
             return;
         }
 
@@ -83,14 +76,15 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
         }
 
         try {
-            String apiUrl = configurationService.getProperty(API_URL_INDEXING_PROPERTY);
-            String model = configurationService.getProperty(MODEL_PROPERTY);
-            String apiKey = configurationService.getProperty(API_KEY_INDEXING_PROPERTY);
-            boolean solrMultiVectors = configurationService.getBooleanProperty(SOLR_MULTI_VECTORS_PROPERTY, false);
+            String apiUrl = configurationService.getProperty(VectorConstants.API_URL_INDEXING_PROPERTY);
+            String model = configurationService.getProperty(VectorConstants.MODEL_PROPERTY);
+            String apiKey = configurationService.getProperty(VectorConstants.API_KEY_INDEXING_PROPERTY);
+            boolean solrMultiVectors = configurationService
+                    .getBooleanProperty(VectorConstants.SOLR_MULTI_VECTORS_PROPERTY, false);
 
             log.info("Indexing solr multi vector: {}", solrMultiVectors);
 
-            String vectorField = configurationService.getProperty(SOLR_VECTOR_FIELD, DEFAULT_SOLR_VECTOR_FIELD);
+            String vectorField = VectorConstants.resolveVectorField(solrMultiVectors);
 
             if (!solrMultiVectors) {
                 List<Float> vector = embeddingService.embed(chunkingService.normalizeText(title), apiUrl, model,

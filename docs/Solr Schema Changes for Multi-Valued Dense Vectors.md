@@ -66,14 +66,18 @@ Because `search.uniqueid` is `type="string"`, `_root_` must also be `type="strin
 
 ### Single-vector mode (`embeddings.solr.multi.vectors=false`)
 
-- Search field: `embeddings.solr.vector.field` (default `vector`)
+- Search field: derived from `embeddings.solr.multi.vectors`
+  - `false` -> `vector`
+  - `true` -> `vector_multivalued`
 - Query parser options:
   - `knn`: `{!knn f=vector topK=N}[...]`
   - `vectorSimilarity`: `{!vectorSimilarity f=vector minReturn=X}[...]`
 
 ### Multi-vector mode (`embeddings.solr.multi.vectors=true`)
 
-- Search field: `embeddings.solr.vector.fieldMultiValued` (default `vector_multivalued`)
+- Search field: derived from `embeddings.solr.multi.vectors`
+  - `false` -> `vector`
+  - `true` -> `vector_multivalued`
 - Parent/child query strategy:
   - Set `allParents=*:* -_nest_path_:*`
   - Build child query (KNN or vectorSimilarity)

@@ -35,19 +35,7 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
     public static final String HYBRID_SEARCH_REQUEST_PARAM = "dspace.hybrid.search";
     public static final String HYBRID_SEARCH_JSON_PARAM = "dspace.hybrid.search.json";
 
-    private static final String SOLR_DEFAULT_VECTOR_FIELD = "vector";
-    private static final String SEARCH_TYPE_PROPERTY = "searchType";
     private static final String SEARCH_TYPE_HYBRID = "hybrid";
-    private static final String SCORE_FIELD = "score";
-    private static final String HIGHLIGHT_QUERY_PARAM = "hl.q";
-    private static final String PARENT_WHICH_QUERY = "*:* -_nest_path_:*";
-
-    private static final String SEMANTIC_SEARCH_ENABLED_PROPERTY = "semantic.search.enabled";
-    private static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solr.multi.vectors";
-    private static final String SOLR_VECTOR_FIELD_PROPERTY = "embeddings.solr.vector.field";
-    private static final String API_URL_SEARCH_PROPERTY = "embeddings.api.url.search";
-    private static final String API_KEY_SEARCH_PROPERTY = "embeddings.api.key.search";
-    private static final String MODEL_PROPERTY = "embeddings.model";
 
     @Autowired(required = true)
     private EmbeddingService embeddingService;
@@ -62,11 +50,11 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
     public void additionalSearchParameters(Context context, DiscoverQuery discoveryQuery, SolrQuery solrQuery)
             throws SearchServiceException {
 
-        if (!configurationService.getBooleanProperty(SEMANTIC_SEARCH_ENABLED_PROPERTY, false)) {
+        if (!configurationService.getBooleanProperty(VectorConstants.SEMANTIC_SEARCH_ENABLED_PROPERTY, false)) {
             return;
         }
 
-        String searchType = getPropertyValue(discoveryQuery, SEARCH_TYPE_PROPERTY);
+        String searchType = getPropertyValue(discoveryQuery, VectorConstants.SEARCH_TYPE_PROPERTY);
         if (!SEARCH_TYPE_HYBRID.equalsIgnoreCase(searchType)) {
             return;
         }
@@ -77,20 +65,20 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
         }
 
         try {
-            String apiUrl = configurationService.getProperty(API_URL_SEARCH_PROPERTY);
-            String model = configurationService.getProperty(MODEL_PROPERTY);
-            String apiKey = configurationService.getProperty(API_KEY_SEARCH_PROPERTY);
+            String apiUrl = configurationService.getProperty(VectorConstants.API_URL_SEARCH_PROPERTY);
+            String model = configurationService.getProperty(VectorConstants.MODEL_PROPERTY);
+            String apiKey = configurationService.getProperty(VectorConstants.API_KEY_SEARCH_PROPERTY);
 
             List<Float> vector = embeddingService.embed(textQuery, apiUrl, model, apiKey);
             if (vector.isEmpty()) {
                 return;
             }
 
-            boolean solrMultiVectors = configurationService.getBooleanProperty(SOLR_MULTI_VECTORS_PROPERTY, false);
-            String vectorField = configurationService.getProperty(SOLR_VECTOR_FIELD_PROPERTY,
-                    SOLR_DEFAULT_VECTOR_FIELD);
+            boolean solrMultiVectors = configurationService
+                    .getBooleanProperty(VectorConstants.SOLR_MULTI_VECTORS_PROPERTY, false);
+            String vectorField = VectorConstants.resolveVectorField(solrMultiVectors);
             int topK = configurationService.getIntProperty("embeddings.hybrid.topK",
-                    configurationService.getIntProperty("embeddings.search.topK", 10));
+                    configurationService.getIntProperty(VectorConstants.SEARCH_TOP_K_PROPERTY, 10));
             int rrfK = configurationService.getIntProperty("embeddings.hybrid.rrf.k", 60);
 
             String vectorPayload = vector.stream().map(String::valueOf).collect(Collectors.joining(","));
@@ -103,11 +91,11 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
             log.info("Executing hybrid search using RRF with topK {}, rrf.k {}, solr multi vectors {}",
                     topK, rrfK, solrMultiVectors);
 
-            if (!discoveryQuery.getSearchFields().contains(SCORE_FIELD)) {
-                discoveryQuery.addSearchField(SCORE_FIELD);
+            if (!discoveryQuery.getSearchFields().contains(VectorConstants.SCORE_FIELD)) {
+                discoveryQuery.addSearchField(VectorConstants.SCORE_FIELD);
             }
-            solrQuery.addField(SCORE_FIELD);
-            solrQuery.set(HIGHLIGHT_QUERY_PARAM, textQuery);
+            solrQuery.addField(VectorConstants.SCORE_FIELD);
+            solrQuery.set(VectorConstants.HIGHLIGHT_QUERY_PARAM, textQuery);
             solrQuery.set(HYBRID_SEARCH_REQUEST_PARAM, Boolean.TRUE.toString());
             solrQuery.set(HYBRID_SEARCH_JSON_PARAM, Utils.toJSONString(combinedQuery));
 
@@ -166,10 +154,10 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
         knn.put("topK", topK);
         knn.put("filteredSearchThreshold", "60");
         knn.put("query", "[" + vectorPayload + "]");
-        knn.put("childrenOf", PARENT_WHICH_QUERY);
+        knn.put("childrenOf", VectorConstants.PARENT_WHICH_QUERY);
 
         Map<String, Object> parent = new LinkedHashMap<>();
-        parent.put("which", PARENT_WHICH_QUERY);
+        parent.put("which", VectorConstants.PARENT_WHICH_QUERY);
         parent.put("score", "max");
         parent.put("query", Map.of("knn", knn));
 
@@ -190,8 +178,8 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
         if (fields.isEmpty()) {
             fields.add("*");
         }
-        if (!fields.contains(SCORE_FIELD)) {
-            fields.add(SCORE_FIELD);
+        if (!fields.contains(VectorConstants.SCORE_FIELD)) {
+            fields.add(VectorConstants.SCORE_FIELD);
         }
         return fields;
     }

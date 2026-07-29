@@ -14,6 +14,9 @@ Semantic search adds embedding-based indexing and querying on top of Discovery.
 4. Two runtime modes are supported:
    - Single vector per item: `embeddings.solr.multi.vectors=false`
    - MultiVectors (nested child vectors): `embeddings.solr.multi.vectors=true`
+5. The Solr vector field is derived from the mode:
+   - Single vector mode uses `vector`
+   - MultiVectors mode uses `vector_multivalued`
 
 ## Backend Runtime Flow
 
@@ -27,12 +30,12 @@ Semantic search adds embedding-based indexing and querying on top of Discovery.
 
 1. Single-vector mode (`embeddings.solr.multi.vectors=false`)
    - Indexes only title text.
-   - Stores one vector in `embeddings.solr.vector.field`.
-   - Searches in `embeddings.solr.vector.field `.
+   - Stores one vector in `vector`.
+   - Searches in `vector`.
 
 2. MultiVectors mode (`embeddings.solr.multi.vectors=true`)
    - Indexes title plus configured additional metadata fields.
-   - Stores vectors in `embeddings.solr.vector.field`.
+   - Stores vectors in `vector_multivalued`.
    - Searches child vectors and returns parents through Solr parent/child query.
 
 ## Configuration Keys
@@ -56,11 +59,9 @@ Defined in `dspace/config/modules/embeddings.cfg`:
 15. `embeddings.api.retry.max.attempts`
 16. `embeddings.api.retry.delay.ms`
 17. `embeddings.search.topK` (used by `knn`)
-18. `embeddings.solr.vector.field `
-19. `embeddings.solr.vector.field MultiValued`
-20. `embeddings.solr.multi.vectors`
-21. `embeddings.search.query.parser` (`knn` or `vectorSimilarity`)
-22. `embeddings.search.min.return` (used by `vectorSimilarity`)
+18. `embeddings.solr.multi.vectors`
+19. `embeddings.search.query.parser` (`knn` or `vectorSimilarity`)
+20. `embeddings.search.min.return` (used by `vectorSimilarity`)
 
 Additional config wiring:
 
