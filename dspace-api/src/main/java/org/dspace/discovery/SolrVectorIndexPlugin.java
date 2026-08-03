@@ -57,7 +57,8 @@ public class SolrVectorIndexPlugin implements SolrServiceIndexPlugin {
     @SuppressWarnings("rawtypes")
     public void additionalIndex(Context context, IndexableObject indexableObject, SolrInputDocument document) {
         log.info("Processing {} for vector indexing", indexableObject.getID());
-        if (!configurationService.getBooleanProperty(VectorConstants.SEMANTIC_SEARCH_ENABLED_PROPERTY, false)) {
+        if (!configurationService.getBooleanProperty(VectorConstants.SEMANTIC_SEARCH_ENABLED_PROPERTY , false) && 
+        !configurationService.getBooleanProperty(VectorConstants.HYBRID_SEARCH_ENABLED_PROPERTY , false)) {
             return;
         }
 

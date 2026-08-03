@@ -50,7 +50,7 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
     public void additionalSearchParameters(Context context, DiscoverQuery discoveryQuery, SolrQuery solrQuery)
             throws SearchServiceException {
 
-        if (!configurationService.getBooleanProperty(VectorConstants.SEMANTIC_SEARCH_ENABLED_PROPERTY, false)) {
+        if (!configurationService.getBooleanProperty(VectorConstants.HYBRID_SEARCH_ENABLED_PROPERTY, false)) {
             return;
         }
 

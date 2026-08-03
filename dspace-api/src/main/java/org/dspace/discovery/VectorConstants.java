@@ -17,6 +17,7 @@ public final class VectorConstants {
     public static final String PARENT_WHICH_QUERY = "*:* -_nest_path_:*";
     public static final String SEARCH_TYPE_PROPERTY = "searchType";
     public static final String SEMANTIC_SEARCH_ENABLED_PROPERTY = "semantic.search.enabled";
+    public static final String HYBRID_SEARCH_ENABLED_PROPERTY = "hybrid.search.enabled";
     public static final String SOLR_MULTI_VECTORS_PROPERTY = "embeddings.solr.multi.vectors";
     public static final String API_URL_INDEXING_PROPERTY = "embeddings.api.url.indexing";
     public static final String API_KEY_INDEXING_PROPERTY = "embeddings.api.key.indexing";
