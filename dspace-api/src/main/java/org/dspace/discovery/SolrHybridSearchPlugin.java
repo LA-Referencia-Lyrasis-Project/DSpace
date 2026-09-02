@@ -19,6 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.common.util.Utils;
+import org.apache.solr.common.params.FacetParams;
 import org.dspace.core.Context;
 import org.dspace.discovery.embedding.ChunkingService;
 import org.dspace.discovery.embedding.EmbeddingService;
@@ -36,6 +37,8 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
     public static final String HYBRID_SEARCH_JSON_PARAM = "dspace.hybrid.search.json";
 
     private static final String SEARCH_TYPE_HYBRID = "hybrid";
+    private static final String QUERY_PARSER_KNN = "knn";
+    private static final String QUERY_PARSER_VECTOR_SIMILARITY = "vectorSimilarity";
 
     @Autowired(required = true)
     private EmbeddingService embeddingService;
@@ -76,20 +79,26 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
 
             boolean solrMultiVectors = configurationService
                     .getBooleanProperty(VectorConstants.SOLR_MULTI_VECTORS_PROPERTY, false);
+                String queryParser = configurationService
+                    .getProperty("embeddings.search.query.parser", QUERY_PARSER_KNN);
+                String effectiveQueryParser = resolveQueryParser(queryParser);
             String vectorField = VectorConstants.resolveVectorField(solrMultiVectors);
-            int topK = configurationService.getIntProperty("embeddings.hybrid.topK",
+                int topK = configurationService.getIntProperty("embeddings.hybrid.topK",
                     configurationService.getIntProperty(VectorConstants.SEARCH_TOP_K_PROPERTY, 10));
             int rrfK = configurationService.getIntProperty("embeddings.hybrid.rrf.k", 60);
+                double minReturn = configurationService.getPropertyAsType(
+                    "embeddings.hybrid.min.return", configurationService.getPropertyAsType(
+                        "embeddings.search.min.return", 0.7d));
 
             String vectorPayload = vector.stream().map(String::valueOf).collect(Collectors.joining(","));
             Map<String, Object> vectorQuery = solrMultiVectors
-                    ? buildNestedMultiVectorQuery(vectorField, topK, vectorPayload)
-                    : buildVectorQuery(vectorField, topK, vectorPayload);
+                    ? buildNestedMultiVectorQuery(effectiveQueryParser, vectorField, topK, minReturn, vectorPayload)
+                    : buildVectorQuery(effectiveQueryParser, vectorField, topK, minReturn, vectorPayload);
 
-            Map<String, Object> combinedQuery = buildCombinedQuery(solrQuery, vectorQuery, rrfK);
+                Map<String, Object> combinedQuery = buildCombinedQuery(solrQuery, vectorQuery, rrfK);
 
-            log.info("Executing hybrid search using RRF with topK {}, rrf.k {}, solr multi vectors {}",
-                    topK, rrfK, solrMultiVectors);
+                log.info("Executing hybrid search using RRF with query parser '{}', topK {}, minReturn {}, rrf.k {}, "
+                        + "solr multi vectors {}", effectiveQueryParser, topK, minReturn, rrfK, solrMultiVectors);
 
             if (!discoveryQuery.getSearchFields().contains(VectorConstants.SCORE_FIELD)) {
                 discoveryQuery.addSearchField(VectorConstants.SCORE_FIELD);
@@ -98,6 +107,7 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
             solrQuery.set(VectorConstants.HIGHLIGHT_QUERY_PARAM, textQuery);
             solrQuery.set(HYBRID_SEARCH_REQUEST_PARAM, Boolean.TRUE.toString());
             solrQuery.set(HYBRID_SEARCH_JSON_PARAM, Utils.toJSONString(combinedQuery));
+            solrQuery.set(FacetParams.FACET_METHOD, "enum");
 
             solrQuery.set("debugQuery", "on");
             solrQuery.set("debug", "results");
@@ -138,17 +148,31 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
         return combinedQuery;
     }
 
-    private Map<String, Object> buildVectorQuery(String vectorField, int topK, String vectorPayload) {
+    private Map<String, Object> buildVectorQuery(String queryParser, String vectorField, int topK, double minReturn,
+            String vectorPayload) {
+        if (QUERY_PARSER_VECTOR_SIMILARITY.equalsIgnoreCase(queryParser)) {
+            return Map.of("lucene", Map.of("query", buildVectorSimilarityQuery(vectorField, minReturn, vectorPayload)));
+        }
+
         Map<String, Object> knn = new LinkedHashMap<>();
         knn.put("f", vectorField);
         knn.put("topK", topK);
         knn.put("filteredSearchThreshold", "60");
         knn.put("query", "[" + vectorPayload + "]");
-
         return Map.of("knn", knn);
     }
 
-    private Map<String, Object> buildNestedMultiVectorQuery(String vectorField, int topK, String vectorPayload) {
+    private Map<String, Object> buildNestedMultiVectorQuery(String queryParser, String vectorField, int topK,
+            double minReturn, String vectorPayload) {
+        if (QUERY_PARSER_VECTOR_SIMILARITY.equalsIgnoreCase(queryParser)) {
+            Map<String, Object> parent = new LinkedHashMap<>();
+            parent.put("which", VectorConstants.PARENT_WHICH_QUERY);
+            parent.put("score", "max");
+            parent.put("query", buildVectorQuery(queryParser, vectorField, topK, minReturn, vectorPayload));
+
+            return Map.of("parent", parent);
+        }
+
         Map<String, Object> knn = new LinkedHashMap<>();
         knn.put("f", vectorField);
         knn.put("topK", topK);
@@ -162,6 +186,24 @@ public class SolrHybridSearchPlugin implements SolrServiceSearchPlugin {
         parent.put("query", Map.of("knn", knn));
 
         return Map.of("parent", parent);
+    }
+
+    private String buildVectorSimilarityQuery(String vectorField, double minReturn, String vectorPayload) {
+        return "{!" + QUERY_PARSER_VECTOR_SIMILARITY + " f=" + vectorField + " minReturn=" + minReturn + "}["
+                + vectorPayload + "]";
+    }
+
+    private String resolveQueryParser(String queryParser) {
+        if (QUERY_PARSER_VECTOR_SIMILARITY.equalsIgnoreCase(queryParser)) {
+            return QUERY_PARSER_VECTOR_SIMILARITY;
+        }
+
+        if (QUERY_PARSER_KNN.equalsIgnoreCase(queryParser)) {
+            return QUERY_PARSER_KNN;
+        }
+
+        log.warn("Missing/Invalid embeddings.search.query.parser, falling back to '{}'", QUERY_PARSER_KNN);
+        return QUERY_PARSER_KNN;
     }
 
     private List<String> getFields(SolrQuery solrQuery) {

@@ -7,6 +7,9 @@
  */
 package org.dspace.discovery.embedding.models;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record EmbeddingRequest(
         Object input,
         String model,
