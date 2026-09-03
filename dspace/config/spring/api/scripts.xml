@@ -87,6 +87,11 @@
         <property name="dspaceRunnableClass" value="org.dspace.app.solrdatabaseresync.SolrDatabaseResyncCli"/>
     </bean>
 
+    <bean id="dark-mint" class="org.dspace.app.dark.DarkMintScriptConfiguration">
+        <property name="description" value="Mint dARK identifiers for one Item or all archived Items without dARK"/>
+        <property name="dspaceRunnableClass" value="org.dspace.app.dark.DarkMint"/>
+    </bean>
+
     <bean id="import" class="org.dspace.app.itemimport.ItemImportCLIScriptConfiguration" primary="true">
         <property name="description" value="Batch Import from Simple Archive Format (SAF)" />
         <property name="dspaceRunnableClass" value="org.dspace.app.itemimport.ItemImportCLI"/>

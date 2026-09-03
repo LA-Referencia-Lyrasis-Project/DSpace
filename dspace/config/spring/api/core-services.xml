@@ -125,6 +125,9 @@
     <bean class="org.dspace.harvest.HarvestSchedulingServiceImpl"/>
 
     <bean class="org.dspace.identifier.DOIServiceImpl"/>
+    <bean class="org.dspace.identifier.DarkServiceImpl"/>
+    <bean class="org.dspace.identifier.dark.DarkClientImpl"/>
+    <bean class="org.dspace.identifier.dark.DarkMetadataBuilder"/>
 
     <bean class="org.dspace.license.CreativeCommonsServiceImpl"/>
     <bean class="org.dspace.license.CCLicenseConnectorServiceImpl"/>
@@ -189,4 +192,3 @@
     <bean class="org.dspace.content.BitstreamLinkingServiceImpl"/>
 
 </beans>
-
