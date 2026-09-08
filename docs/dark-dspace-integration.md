@@ -1,33 +1,34 @@
-# Integracao dARK no DSpace
+# dARK Integration for DSpace
 
-## Objetivo
+## Purpose
 
-Esta implementacao adiciona suporte nativo ao identificador persistente dARK no
-DSpace. Ela segue o padrao de provedores de identificador do DSpace, preserva o
-Handle interno e integra o repositorio somente pela API HTTP do minter dARK.
-Nenhum arquivo do projeto dARK e alterado por esta integracao.
+This implementation adds native support for dARK persistent identifiers to
+DSpace. It follows the DSpace identifier provider pattern, preserves the
+internal Handle, and integrates the repository only through the dARK Minter
+HTTP API. No files in the dARK project are modified by this integration.
 
-O dARK pode ser atribuido automaticamente a novos Items ou, para Items ja
-existentes, pelo comando administrativo `dark-mint`.
+dARK identifiers can be assigned automatically to new Items or, for existing
+Items, through the `dark-mint` administrative command.
 
-## Componentes
+## Components
 
-A integracao possui cinco partes:
+The integration has five parts:
 
-1. `DarkIdentifierProvider` implementa o ciclo de vida do identificador no
-   `IdentifierService` do DSpace.
-2. `DarkClientImpl` comunica-se com a API do minter dARK.
-3. `DarkMetadataBuilder` transforma os metadados do Item em Level 1 e OAI-DC
-   Level 2 aceitos pela API.
-4. `DarkService` e `DarkDAO` persistem a associacao local entre Item e dARK.
-5. `dark-mint` atribui dARKs a Items existentes de maneira idempotente.
+1. `DarkIdentifierProvider` implements the identifier lifecycle in the DSpace
+  `IdentifierService`.
+2. `DarkClientImpl` communicates with the dARK Minter API.
+3. `DarkMetadataBuilder` transforms Item metadata into API-compatible Level 1
+  and OAI-DC Level 2 metadata.
+4. `DarkService` and `DarkDAO` persist the local association between an Item
+  and a dARK.
+5. `dark-mint` assigns dARKs to existing Items idempotently.
 
-## Configuracao
+## Configuration
 
-A configuracao-fonte esta em `dspace/config/modules/dark.cfg`. Depois da
-instalacao, a configuracao efetiva fica em `[dspace.dir]/config/modules/dark.cfg`.
-Altere a copia efetiva e reinicie o DSpace quando mudar configuracoes usadas pelo
-servidor.
+The source configuration is in `dspace/config/modules/dark.cfg`. After
+installation, the effective configuration is in
+`[dspace.dir]/config/modules/dark.cfg`. Update the effective copy and restart
+DSpace after changing settings used by the server.
 
 ```properties
 identifier.dark.enabled = true
@@ -37,9 +38,9 @@ identifier.dark.authority-id = platform-demo
 identifier.dark.naan = 12345
 ```
 
-A autoridade e o NAAN devem existir e estar provisionados na plataforma dARK
-antes da primeira atribuicao. O token bearer e opcional e somente e necessario
-quando a API estiver protegida por autenticacao HTTP:
+The authority and NAAN must exist and be provisioned in the dARK platform
+before the first assignment. The bearer token is optional and is only needed
+when the API is protected by HTTP authentication:
 
 ```properties
 #identifier.dark.api-token =
@@ -47,10 +48,10 @@ identifier.dark.authority-header.enabled = true
 identifier.dark.authority-header = X-Authority-Id
 ```
 
-Em producao, a identidade da autoridade deve preferir mTLS. O cabecalho de
-autoridade existe para o perfil local em que o minter o aceita.
+In production, authority identity should use mTLS. The authority header exists
+for local profiles in which the Minter accepts it.
 
-### URI publica e metadados do identificador
+### Public URI and identifier metadata
 
 ```properties
 identifier.dark.metadata = dc.identifier.dark
@@ -58,16 +59,16 @@ identifier.dark.primary-uri.enabled = true
 identifier.dark.primary-uri.metadata = dc.identifier.uri
 ```
 
-O dARK e gravado no campo configurado em `identifier.dark.metadata`. Com
-`primary-uri.enabled = true`, o valor de `dc.identifier.uri` e substituido pela
-URL do resolver dARK. O Handle continua associado internamente ao Item e ainda e
-resolvido pelo DSpace.
+The dARK is written to the field configured in `identifier.dark.metadata`. With
+`primary-uri.enabled = true`, the `dc.identifier.uri` value is replaced with the
+dARK resolver URL. The Handle remains internally associated with the Item and
+continues to be resolved by DSpace.
 
-### Mapeamento de metadados
+### Metadata mapping
 
-Os campos aceitam uma lista ordenada, separada por virgulas. Todos os campos da
-lista sao lidos, e nao apenas o primeiro. Isso permite compatibilidade com
-colecoes que usam perfis Dublin Core diferentes.
+The fields accept an ordered, comma-separated list. Every field in the list is
+read, rather than only the first one. This supports collections using different
+Dublin Core profiles.
 
 ```properties
 identifier.dark.metadata.title = dc.title
@@ -80,108 +81,112 @@ identifier.dark.metadata.abstract = dc.description.abstract
 identifier.dark.metadata.subject = dc.subject
 ```
 
-Para o Level 1, o minter exige pelo menos um autor e um ano com quatro digitos.
-No mapeamento acima, por exemplo, um Item pode satisfazer esses requisitos usando
-`dc.creator` e `dc.date`, mesmo que nao possua `dc.contributor.author` ou
-`dc.date.issued`.
+For Level 1, the Minter requires at least one author and a year with four
+digits. With the mapping above, for example, an Item can meet these requirements
+using `dc.creator` and `dc.date`, even if it has neither
+`dc.contributor.author` nor `dc.date.issued`.
 
-A ordem da lista determina a ordem dos valores enviados. Ela nao limita a
-validacao: o preflight do CLI procura valores em todos os campos configurados.
+List order determines the order of values sent. It does not limit validation:
+the CLI preflight looks for values in every configured field.
 
-## Fluxo automatico na criacao de Item
+## Automatic flow when creating an Item
 
-Quando o `IdentifierService` registra identificadores para um Item, o
-`DarkIdentifierProvider` participa do fluxo se `identifier.dark.enabled = true`.
-Ele ignora objetos que nao sao Items e nao faz chamadas externas quando esta
-desabilitado.
+When `IdentifierService` registers identifiers for an Item,
+`DarkIdentifierProvider` participates in the flow if
+`identifier.dark.enabled = true`. It ignores objects that are not Items and
+makes no external calls while disabled.
 
 ```mermaid
 sequenceDiagram
     participant D as DSpace/IdentifierService
     participant P as DarkIdentifierProvider
     participant M as dARK Minter
-    participant DB as Banco DSpace
+    participant DB as DSpace Database
 
     D->>P: register(Item)
-    P->>P: procura dARK existente
-    alt Item sem dARK
+    P->>P: find existing dARK
+    alt Item has no dARK
         P->>M: POST /arks/batch
-        M-->>P: ARK reservado
-        P->>DB: grava associacao local
+      M-->>P: reserved ARK
+      P->>DB: save local association
     end
-    P->>P: monta Level 1 e OAI-DC Level 2
+    P->>P: build Level 1 and OAI-DC Level 2
     P->>M: PUT /arks/{ark}
-    M-->>P: estado e CIDs
-    P->>DB: atualiza estado e metadados do Item
+    M-->>P: state and CIDs
+    P->>DB: update Item state and metadata
     P-->>D: ark:/NAAN/nome
 ```
 
-O DSpace armazena a forma canonica `ark:/12345/nome`. O minter usa a forma de
-caminho `ark:12345/nome`; a conversao ocorre somente na fronteira HTTP. Dessa
-forma nao ha registros duplicados locais por diferencas de barra.
+  DSpace stores the canonical form `ark:/12345/name`. The Minter uses the URL
+  path form `ark:12345/name`; conversion occurs only at the HTTP boundary. This
+  avoids duplicate local records caused by slash differences.
 
-O payload enviado ao minter contem metadados Level 1, identificador alternativo
-com o UUID do Item, URL de destino e uma representacao OAI-DC para o Level 2.
-A resposta atualiza o estado do identificador e os CIDs retornados pelo minter.
+  The payload sent to the Minter contains Level 1 metadata, an alternate
+  identifier with the Item UUID, the target URL, and an OAI-DC representation for
+  Level 2. The response updates the identifier state and CIDs returned by the
+  Minter.
 
-Se os metadados obrigatorios estiverem ausentes durante o fluxo automatico, a
-API do minter pode rejeitar o registro. Para migracoes de acervo existente, use
-o CLI, que executa preflight antes de reservar um ARK.
+  If required metadata is absent during the automatic flow, the Minter API may
+  reject the registration. For existing repository content, use the CLI, which
+  performs preflight before reserving an ARK.
 
-## Atribuicao por linha de comando
+  ## Command-line assignment
 
-O script e registrado como `dark-mint` e exige que o provider esteja habilitado.
-Execute-o no diretorio da instalacao DSpace:
+  The script is registered as `dark-mint` and requires the provider to be enabled.
+  Run it from the DSpace installation directory:
 
 ```bash
 bin/dspace dark-mint --uuid <uuid-do-item>
 bin/dspace dark-mint --all
 ```
 
-`--uuid` processa exatamente um Item. `--all` percorre todos os Items e tenta
-somente os que ainda nao possuem dARK. As opcoes sao mutuamente exclusivas.
+`--uuid` processes exactly one Item. `--all` traverses all Items and attempts
+only those without a dARK. The options are mutually exclusive.
 
-Para cada Item, o comando executa esta sequencia:
+For each Item, the command performs this sequence:
 
-1. Consulta se ja existe associacao na tabela `dark`.
-2. Se existir, registra `already has dARK` e nao chama o minter.
-3. Valida autor e ano nos campos de fallback configurados.
-4. Se faltar algum requisito, registra o Item como `skipped` e nao reserva ARK.
-5. Se o preflight passar, delega a `IdentifierService.register`, que reserva,
-   registra remotamente e persiste o resultado.
+1. Checks whether an association already exists in the `dark` table.
+2. If one exists, logs `already has dARK` and does not call the Minter.
+3. Validates the author and year in the configured fallback fields.
+4. If a requirement is missing, logs the Item as `skipped` and does not reserve
+  an ARK.
+5. If preflight succeeds, delegates to `IdentifierService.register`, which
+  reserves, registers remotely, and persists the result.
 
-Ao final de `--all`, o script informa as contagens de `minted`, `already assigned`,
-`skipped for missing metadata` e `failed`. Uma falha em um Item nao interrompe a
-varredura; ao fim, o comando termina com erro se houve alguma falha.
+At the end of `--all`, the script reports counts for `minted`, `already assigned`,
+`skipped for missing metadata`, and `failed`. A failure for one Item does not
+stop the traversal; at the end, the command exits with an error if any failure
+occurred.
 
-Exemplo de preflight para um Item sem autor:
+Example preflight result for an Item without an author:
 
 ```text
 Item <uuid> skipped: missing required dARK metadata dc.creator, dc.contributor.author, dc.contributor.
 ```
 
-A mensagem lista todos os campos de autor configurados porque nenhum deles tinha
-um valor utilizavel. Ela nao significa que somente o primeiro campo foi testado.
+The message lists all configured author fields because none contains a usable
+value. It does not mean that only the first field was tested.
 
-## Persistencia local
+## Local persistence
 
-A migracao cria a sequencia e a tabela `dark`. Cada linha associa um `Item` a um
-ARK unico e armazena, entre outros dados, estado, `client_item_id`, URL de destino
-e CIDs de metadados. Indices protegem consultas por ARK e por objeto DSpace.
+The migration creates the sequence and `dark` table. Each row associates an
+`Item` with a unique ARK and stores, among other data, its state,
+`client_item_id`, target URL, and metadata CIDs. Indexes support lookups by ARK
+and DSpace object.
 
-As migracoes existem para PostgreSQL e H2. Elas devem ser aplicadas pelo processo
-normal de atualizacao do DSpace antes de habilitar o provider em um banco novo.
+Migrations are provided for PostgreSQL and H2. They must be applied through the
+standard DSpace update process before enabling the provider in a new database.
 
-## Implantacao e verificacao
+## Deployment and verification
 
-1. Configure `dark.cfg` na fonte e na instalacao efetiva.
-2. Execute a atualizacao de banco do DSpace para aplicar a migracao `dark`.
-3. Gere e instale o artefato DSpace normalmente.
-4. Reinicie o servidor DSpace.
-5. Teste primeiro um unico Item com `bin/dspace dark-mint --uuid ...`.
-6. Somente depois execute `bin/dspace dark-mint --all` para o acervo legado.
+1. Configure `dark.cfg` in the source and effective installation.
+2. Run the DSpace database update to apply the `dark` migration.
+3. Build and install the DSpace artifact normally.
+4. Restart the DSpace server.
+5. Test one Item first using `bin/dspace dark-mint --uuid ...`.
+6. Only then run `bin/dspace dark-mint --all` for legacy content.
 
-Para uma compilacao focada durante o desenvolvimento:
+For a focused build during development:
 
 ```bash
 mvn -pl dspace-api clean package \
@@ -189,16 +194,16 @@ mvn -pl dspace-api clean package \
   -Dmaven.compiler.useIncrementalCompilation=false
 ```
 
-Os testes unitarios especificos usam `-DskipUnitTests=false`, mas o ambiente
-precisa ter o artefato `org.dspace:dspace-parent:zip:testEnvironment:11.0-SNAPSHOT`
-disponivel localmente.
+Focused unit tests use `-DskipUnitTests=false`, but the environment must have
+the `org.dspace:dspace-parent:zip:testEnvironment:11.0-SNAPSHOT` artifact
+available locally.
 
-## Operacao segura
+## Safe operation
 
-- Mantenha `identifier.dark.enabled = false` ate a autoridade, o NAAN e a API
-  estarem prontos.
-- Teste com `--uuid` antes do processamento em lote.
-- Corrija metadados dos Items ignorados e execute novamente o mesmo comando;
-  o fluxo e idempotente para Items que ja possuem dARK.
-- Nao modifique o repositorio ou a API dARK para adaptar formatos do DSpace; a
-  compatibilidade de formato e tratada pelo cliente DSpace.
+- Keep `identifier.dark.enabled = false` until the authority, NAAN, and API are
+  ready.
+- Test with `--uuid` before bulk processing.
+- Fix metadata for skipped Items and run the same command again; the flow is
+  idempotent for Items that already have a dARK.
+- Do not modify the dARK repository or API to adapt DSpace formats; format
+  compatibility is handled by the DSpace client.
