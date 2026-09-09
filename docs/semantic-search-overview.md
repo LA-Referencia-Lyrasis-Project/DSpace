@@ -1,127 +1,47 @@
-# Semantic Search Feature Overview (DSpace Backend)
+# Busca Semântica e Híbrida (beta)
 
-## Scope
+## Visão geral
 
-This document summarizes semantic-search changes in branch `semantic-search` compared to `main`.
+Esta funcionalidade adiciona dois modos beta à busca Discovery do DSpace, além da busca léxica tradicional:
 
-## Feature Summary
+- **Busca semântica:** compara o significado da consulta e dos metadados dos itens por meio de embeddings.
+- **Busca híbrida:** combina o ranking da busca léxica com o ranking vetorial usando **RRF** (*Reciprocal Rank Fusion*).
 
-Semantic search adds embedding-based indexing and querying on top of Discovery.
+A implementação usa recursos de busca vetorial do **Solr 10.1 beta**, incluindo vetores densos, múltiplos vetores por item e a combinação de rankings por RRF.
 
-1. A new REST query parameter `searchType` is supported (`lexical` or `semantic`).
-2. Semantic mode generates embeddings and executes vector queries in Solr.
-3. Discovery results expose `score` in REST so UI can sort/render relevance.
-4. Two runtime modes are supported:
-   - Single vector per item: `embeddings.solr.multi.vectors=false`
-   - MultiVectors (nested child vectors): `embeddings.solr.multi.vectors=true`
-5. The Solr vector field is derived from the mode:
-   - Single vector mode uses `vector`
-   - MultiVectors mode uses `vector_multivalued`
+## Indexação com embeddings
 
-## Backend Runtime Flow
+Durante a indexação, `SolrVectorIndexPlugin` gera embeddings por uma API compatível com OpenAI. A API, o modelo, as chaves e a dimensão esperada são configurados em `dspace/config/modules/embeddings.cfg`.
 
-1. `searchType=semantic` is passed from REST to `DiscoverQuery` properties.
-2. `SolrSemanticSearchPlugin` detects semantic mode and replaces text query with vector query.
-3. `SolrVectorIndexPlugin` generates and stores vectors during indexing.
-4. `EmbeddingApiClient` calls OpenAI-compatible embedding APIs with retry/backoff.
-5. `DiscoverResultConverter` maps Solr `score` into REST `SearchResultEntryRest.score`.
+Há dois modos de armazenamento:
 
-### Mode-specific behavior
+1. **Vetor único:** gera um embedding do título e o armazena no campo `vector`.
+2. **Multivetores:** armazena vetores no campo `vector_multivalued` para o título e para os metadados configurados, como resumo (`dc.description.abstract`) e assunto (`dc.subject`). A consulta encontra o melhor vetor-filho e devolve o item-pai.
 
-1. Single-vector mode (`embeddings.solr.multi.vectors=false`)
-   - Indexes only title text.
-   - Stores one vector in `vector`.
-   - Searches in `vector`.
+### Chunking de textos grandes
 
-2. MultiVectors mode (`embeddings.solr.multi.vectors=true`)
-   - Indexes title plus configured additional metadata fields.
-   - Stores vectors in `vector_multivalued`.
-   - Searches child vectors and returns parents through Solr parent/child query.
+Resumos e outros campos longos são normalizados e divididos em segmentos antes da vetorização. O tamanho do segmento, a sobreposição e a quantidade máxima de segmentos são configuráveis. Cada segmento recebe o título como contexto antes de gerar o embedding.
 
-## Configuration Keys
+Esse processo evita que um resumo extenso seja representado por apenas um vetor e melhora a recuperação quando o trecho relevante está em uma parte específica do texto.
 
-Defined in `dspace/config/modules/embeddings.cfg`:
+## Fluxo de busca
 
-1. `semantic.search.enabled`
-2. `embeddings.api.url.indexing`
-3. `embeddings.model`
-4. `embeddings.indexing.title.field`
-5. `embeddings.indexing.additional.fields`
-6. `embeddings.api.url.search`
-7. `embeddings.api.key.indexing`
-8. `embeddings.api.key.search`
-9. `embeddings.encoding_format`
-10. `embeddings.max.segment.size.tokens`
-11. `embeddings.max.overlap.size.tokens`
-12. `embeddings.max.chunks.size`
-13. `embeddings.vector.dimension`
-14. `embeddings.api.timeout.ms`
-15. `embeddings.api.retry.max.attempts`
-16. `embeddings.api.retry.delay.ms`
-17. `embeddings.search.topK` (used by `knn`)
-18. `embeddings.solr.multi.vectors`
-19. `embeddings.search.query.parser` (`knn` or `vectorSimilarity`)
-20. `embeddings.search.min.return` (used by `vectorSimilarity`)
+O REST aceita `searchType=lexical|semantic|hybrid` nos endpoints Discovery.
 
-Additional config wiring:
+1. A consulta é normalizada e enviada ao serviço de embeddings.
+2. **Semântica:** `SolrSemanticSearchPlugin` substitui a consulta textual por uma consulta vetorial `knn` ou `vectorSimilarity` no Solr.
+3. **Híbrida:** `SolrHybridSearchPlugin` envia a consulta léxica e a vetorial ao handler `/combined` do Solr 10.1 beta. O `CombinedQuerySearchHandler` aplica RRF e retorna uma lista única ordenada.
+4. O campo `score` retornado pelo Solr é incluído na resposta REST.
 
-1. `rest.properties.exposed = semantic.search.enabled` in `dspace/config/modules/rest.cfg`
-2. `semantic.search.enabled = ${semantic.search.enabled}` in `dspace/config/dspace.cfg`
+Em caso de indisponibilidade do serviço de embeddings, a indexação e a busca mantêm o comportamento léxico, registrando o erro.
 
-## Solr Requirements
+## Ativação
 
-See [Solr Schema Changes for Multi-Valued Dense Vectors](Solr%20Schema%20Changes%20for%20Multi-Valued%20Dense%20Vectors.md).
+Os modos são independentes e ficam desativados por padrão:
 
-Always required:
+- `semantic.search.enabled=false`
+- `hybrid.search.enabled=false`
 
-1. `DenseVectorField` type (`knn_vector`)
-2. Single-vector field `vector`
+Para ativá-los, é necessário configurar um serviço de embeddings compatível, garantir que a dimensão do modelo corresponda ao `DenseVectorField` do Solr, aplicar o schema/configuração do Solr e reindexar o Discovery.
 
-Required only when `embeddings.solr.multi.vectors=true`:
-
-1. Nested support (`_nest_path_` and `_root_`)
-2. Multi-valued vector field (`vector_multivalued`)
-3. Identity fields (`search.resourceid`, `search.resourcetype`, `search.uniqueid`) must not be required
-
-## Files Created in Branch
-
-1. `docs/solr-issues.md`
-2. `dspace-api/src/main/java/org/dspace/discovery/SolrSemanticSearchPlugin.java`
-3. `dspace-api/src/main/java/org/dspace/discovery/SolrVectorIndexPlugin.java`
-4. `dspace-api/src/main/java/org/dspace/discovery/embedding/ChunkingService.java`
-5. `dspace-api/src/main/java/org/dspace/discovery/embedding/CustomTokenCountEstimator.java`
-6. `dspace-api/src/main/java/org/dspace/discovery/embedding/EmbeddingApiClient.java`
-7. `dspace-api/src/main/java/org/dspace/discovery/embedding/EmbeddingService.java`
-8. `dspace-api/src/main/java/org/dspace/discovery/embedding/models/EmbeddingData.java`
-9. `dspace-api/src/main/java/org/dspace/discovery/embedding/models/EmbeddingRequest.java`
-10. `dspace-api/src/main/java/org/dspace/discovery/embedding/models/EmbeddingResponse.java`
-11. `dspace-api/src/main/java/org/dspace/discovery/embedding/models/Usage.java`
-12. `dspace/config/modules/embeddings.cfg`
-
-## Files Modified in Branch
-
-1. `dspace-api/pom.xml`
-2. `dspace-server-webapp/src/main/java/org/dspace/app/rest/DiscoveryRestController.java`
-3. `dspace-server-webapp/src/main/java/org/dspace/app/rest/converter/DiscoverResultConverter.java`
-4. `dspace-server-webapp/src/main/java/org/dspace/app/rest/link/search/DiscoveryRestHalLinkFactory.java`
-5. `dspace-server-webapp/src/main/java/org/dspace/app/rest/link/search/SearchConfigurationResourceHalLinkFactory.java`
-6. `dspace-server-webapp/src/main/java/org/dspace/app/rest/link/search/SearchFacetEntryHalLinkFactory.java`
-7. `dspace-server-webapp/src/main/java/org/dspace/app/rest/model/SearchResultEntryRest.java`
-8. `dspace-server-webapp/src/main/java/org/dspace/app/rest/repository/DiscoveryRestRepository.java`
-9. `dspace-server-webapp/src/main/java/org/dspace/app/rest/utils/RestDiscoverQueryBuilder.java`
-10. `dspace-server-webapp/src/test/data/dspaceFolder/config/spring/api/test-discovery.xml`
-11. `dspace/config/dspace.cfg`
-12. `dspace/config/modules/rest.cfg`
-13. `dspace/config/registries/local-types.xml`
-14. `dspace/config/spring/api/discovery.xml`
-15. `dspace/solr/search/conf/schema.xml`
-16. `dspace/solr/search/conf/solrconfig.xml`
-
-## Branch Review Notes
-
-Non-feature artifacts present in the branch diff:
-
-1. `dspace-api/javac.20260526_173744.args`
-2. `hs_err_pid152131.log`
-
-Recommendation: remove these files from the branch before opening/finalizing PR.
+Os principais parâmetros disponíveis incluem `embeddings.solr.multi.vectors`, `embeddings.search.query.parser`, `embeddings.search.topK`, `embeddings.hybrid.topK` e `embeddings.hybrid.rrf.k`.
