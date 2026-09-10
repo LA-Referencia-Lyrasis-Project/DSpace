@@ -9,6 +9,8 @@ package org.dspace.identifier.dark;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -85,7 +87,7 @@ public class DarkMetadataBuilderTest {
         when(itemService.getMetadataByMetadataString(item, "dc.description.abstract")).thenReturn(abstracts);
         when(itemService.getMetadataByMetadataString(item, "dc.subject")).thenReturn(subjects);
 
-        DarkMetadataRequest request = builder.build(context, item, "platform-demo", "ark:/12345/abc123");
+        DarkMetadataRequest request = builder.build(context, item, "platform-demo", "ark:12345/abc123");
 
         assertEquals("platform-demo", request.getAuthorityId());
         assertEquals("https://repository.example.org/items/" + itemId, request.getTarget());
@@ -102,33 +104,35 @@ public class DarkMetadataBuilderTest {
     @Test
     public void testBuildCombinesCommaSeparatedMetadataFields() throws Exception {
         Context context = mock(Context.class);
+        List<MetadataValue> contributors = List.of(metadata("Contributor Author"));
+        List<MetadataValue> creators = List.of(metadata("Creator Author"));
+
         metadataFields(DarkMetadataBuilder.CFG_CREATOR_METADATA, "dc.contributor", "dc.creator");
         when(builder.handleService.findHandle(context, item)).thenReturn(null);
-        when(itemService.getMetadataByMetadataString(item, "dc.contributor"))
-            .thenReturn(List.of(metadata("Contributor Author")));
-        when(itemService.getMetadataByMetadataString(item, "dc.creator"))
-            .thenReturn(List.of(metadata("Creator Author")));
+        when(itemService.getMetadataByMetadataString(item, "dc.contributor")).thenReturn(contributors);
+        when(itemService.getMetadataByMetadataString(item, "dc.creator")).thenReturn(creators);
 
-        DarkMetadataRequest request = builder.build(context, item, "platform-demo", "ark:/12345/abc123");
+        DarkMetadataRequest request = builder.build(context, item, "platform-demo", "ark:12345/abc123");
 
         assertEquals(List.of("Contributor Author", "Creator Author"), request.getMinimalMetadata().get("authors"));
     }
 
     @Test
     public void testMissingRequiredMetadataUsesAllConfiguredFallbackFields() {
+        List<MetadataValue> creators = List.of(metadata("Fallback Author"));
+        List<MetadataValue> dates = List.of(metadata("2020-08-05"));
+
         metadataFields(DarkMetadataBuilder.CFG_CREATOR_METADATA,
                        "dc.creator", "dc.contributor.author", "dc.contributor");
         metadataFields(DarkMetadataBuilder.CFG_DATE_METADATA, "dc.date", "dc.date.issued");
-        when(itemService.getMetadataByMetadataString(item, "dc.contributor.author"))
-            .thenReturn(List.of(metadata("Fallback Author")));
-        when(itemService.getMetadataByMetadataString(item, "dc.date.issued"))
-            .thenReturn(List.of(metadata("2020-08-05")));
+        when(itemService.getMetadataByMetadataString(item, "dc.contributor.author")).thenReturn(creators);
+        when(itemService.getMetadataByMetadataString(item, "dc.date.issued")).thenReturn(dates);
 
         assertTrue(builder.missingRequiredMetadata(item).isEmpty());
     }
 
     private void metadataFields(String key, String... fields) {
-        when(builder.configurationService.getArrayProperty(key, new String[] {fields[0]})).thenReturn(fields);
+        when(builder.configurationService.getArrayProperty(eq(key), any(String[].class))).thenReturn(fields);
     }
 
     private MetadataValue metadata(String value) {

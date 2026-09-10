@@ -10,7 +10,9 @@ package org.dspace.identifier.dark;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,13 +57,29 @@ public class DarkClientImpl implements DarkClient {
     @Override
     public DarkArkResponse reserveARK(String authorityId, String naan, String clientItemId)
         throws DarkIdentifierException {
-        Map<String, Object> item = new HashMap<>();
-        item.put("client_item_id", clientItemId);
+        DarkBatchResponse response = reserveARKs(authorityId, naan, Collections.singletonList(clientItemId));
+        if (response.getResults() == null || response.getResults().isEmpty()) {
+            throw new DarkIdentifierException("dARK reservation response did not contain any result.",
+                                              DarkIdentifierException.BAD_ANSWER);
+        }
+        return response.getResults().get(0);
+    }
+
+    @Override
+    public DarkBatchResponse reserveARKs(String authorityId, String naan, List<String> clientItemIds)
+        throws DarkIdentifierException {
+        List<Map<String, Object>> items = clientItemIds.stream()
+            .map(clientItemId -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("client_item_id", clientItemId);
+                return item;
+            })
+            .collect(Collectors.toList());
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("authority_id", authorityId);
         payload.put("naan", naan);
-        payload.put("items", Collections.singletonList(item));
+        payload.put("items", items);
 
         HttpPost post = new HttpPost(minterApiUrl() + "/arks/batch");
         post.setEntity(jsonEntity(payload));
@@ -72,11 +90,7 @@ public class DarkClientImpl implements DarkClient {
             throw new DarkIdentifierException("dARK reservation failed: " + response.getErrors().get(0).getError(),
                                               DarkIdentifierException.BAD_REQUEST);
         }
-        if (response.getResults() == null || response.getResults().isEmpty()) {
-            throw new DarkIdentifierException("dARK reservation response did not contain any result.",
-                                              DarkIdentifierException.BAD_ANSWER);
-        }
-        return response.getResults().get(0);
+        return response;
     }
 
     @Override

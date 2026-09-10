@@ -27,35 +27,21 @@ public class DarkServiceImplTest {
     public void setUp() {
         service = new DarkServiceImpl();
         service.configurationService = mock(ConfigurationService.class);
-        when(service.configurationService.getProperty("identifier.dark.resolver-api-url", ""))
-            .thenReturn("https://resolver.example/api/v1/");
     }
 
     @Test
     public void testFormatIdentifierAcceptsArk() throws Exception {
-        assertEquals("ark:/12345/abc123", service.formatIdentifier("ark:/12345/abc123"));
+        assertEquals("ark:12345/abc123", service.formatIdentifier("ark:12345/abc123"));
     }
 
     @Test
-    public void testFormatIdentifierNormalizesArkWithoutSlash() throws Exception {
-        assertEquals("ark:/12345/2000000001x", service.formatIdentifier("ark:12345/2000000001x"));
-    }
-
-    @Test
-    public void testFormatIdentifierAcceptsResolverUrl() throws Exception {
-        assertEquals("ark:/12345/abc123",
-                     service.formatIdentifier("https://resolver.example/api/v1/arks/ark:/12345/abc123"));
+    public void testFormatIdentifierNormalizesArkWithSlash() throws Exception {
+        assertEquals("ark:12345/2000000001x", service.formatIdentifier("ark:/12345/2000000001x"));
     }
 
     @Test(expected = DarkIdentifierException.class)
     public void testFormatIdentifierRejectsInvalidIdentifier() throws Exception {
         service.formatIdentifier("doi:10.5072/test");
-    }
-
-    @Test
-    public void testExternalFormUsesConfiguredResolver() throws Exception {
-        assertEquals("https://resolver.example/api/v1/arks/ark:/12345/abc123",
-                     service.DARKToExternalForm("ark:/12345/abc123"));
     }
 
 }

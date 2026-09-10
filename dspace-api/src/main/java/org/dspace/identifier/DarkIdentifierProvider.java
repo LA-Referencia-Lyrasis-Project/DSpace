@@ -8,9 +8,13 @@
 package org.dspace.identifier;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
@@ -28,6 +32,7 @@ import org.dspace.content.logic.TrueFilter;
 import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
 import org.dspace.identifier.dark.DarkArkResponse;
+import org.dspace.identifier.dark.DarkBatchResponse;
 import org.dspace.identifier.dark.DarkClient;
 import org.dspace.identifier.dark.DarkIdentifierException;
 import org.dspace.identifier.dark.DarkMetadataBuilder;
@@ -47,8 +52,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
     public static final String CFG_AUTHORITY_ID = "identifier.dark.authority-id";
     public static final String CFG_NAAN = "identifier.dark.naan";
     public static final String CFG_DARK_METADATA = "identifier.dark.metadata";
-    public static final String CFG_PRIMARY_URI_ENABLED = "identifier.dark.primary-uri.enabled";
-    public static final String CFG_PRIMARY_URI_METADATA = "identifier.dark.primary-uri.metadata";
+    public static final String CFG_BATCH_SIZE = "identifier.dark.batch-size";
 
     public static final Integer TO_BE_RESERVED = 1;
     public static final Integer RESERVED = 2;
@@ -247,6 +251,71 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         }
     }
 
+    public Map<UUID, String> reserveBatch(Context context, List<Item> items) throws IdentifierException {
+        if (!isEnabled() || items.isEmpty()) {
+            return Map.of();
+        }
+
+        try {
+            String authorityId = getAuthorityId();
+            String naan = getNaan();
+            List<Item> itemsToReserve = new ArrayList<>();
+            List<String> clientItemIds = new ArrayList<>();
+            Map<UUID, String> reserved = new LinkedHashMap<>();
+            for (Item item : items) {
+                String existingArk = getDARKByObject(context, item);
+                if (existingArk == null) {
+                    itemsToReserve.add(item);
+                    clientItemIds.add(item.getID().toString());
+                } else {
+                    reserved.put(item.getID(), existingArk);
+                }
+            }
+            if (itemsToReserve.isEmpty()) {
+                return reserved;
+            }
+
+            DarkBatchResponse response = darkClient.reserveARKs(authorityId, naan, clientItemIds);
+            Map<String, DarkArkResponse> responseByClientItemId = new LinkedHashMap<>();
+            if (response.getResults() != null) {
+                for (DarkArkResponse arkResponse : response.getResults()) {
+                    if (StringUtils.isNotBlank(arkResponse.getClientItemId())) {
+                        responseByClientItemId.put(arkResponse.getClientItemId(), arkResponse);
+                    }
+                }
+            }
+
+            for (Item item : itemsToReserve) {
+                DarkArkResponse arkResponse = responseByClientItemId.get(item.getID().toString());
+                if (arkResponse == null) {
+                    throw new DarkIdentifierException("dARK batch reservation response did not include Item " +
+                                                          item.getID() + ".",
+                                                      DarkIdentifierException.BAD_ANSWER);
+                }
+
+                DARK dark = darkService.create(context);
+                dark.setArk(darkService.formatIdentifier(arkResponse.getArk()));
+                dark.setDSpaceObject(item);
+                dark.setClientItemId(StringUtils.defaultIfBlank(arkResponse.getClientItemId(), item.getID().toString()));
+                applyResponse(dark, arkResponse);
+                if (dark.getStatus() == null) {
+                    dark.setStatus(RESERVED);
+                }
+                darkService.update(context, dark);
+                reserved.put(item.getID(), dark.getArk());
+                log.info("Reserved dARK {} for Item {} in batch with state {}.",
+                         dark.getArk(), item.getID(), arkResponse.getState());
+            }
+            return reserved;
+        } catch (DarkIdentifierException e) {
+            log.error("Unable to reserve dARK batch.", e);
+            throw e;
+        } catch (SQLException e) {
+            log.error("Unable to reserve dARK batch.", e);
+            throw new RuntimeException("Error while attempting to reserve dARKs in batch.", e);
+        }
+    }
+
     @Override
     public DSpaceObject resolve(Context context, String identifier, String... attributes)
         throws IdentifierNotFoundException, IdentifierNotResolvableException {
@@ -402,7 +471,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
 
         try {
             Item item = (Item) dso;
-            String value = darkService.DARKToExternalForm(ark);
+            String value = darkService.formatIdentifier(ark);
             List<MetadataValue> metadata = itemService.getMetadata(item,
                                                                    darkMetadataFieldName.schema,
                                                                    darkMetadataFieldName.element,
@@ -423,22 +492,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
                                         null,
                                         value);
             }
-            if (configurationService.getBooleanProperty(CFG_PRIMARY_URI_ENABLED, false)) {
-                MetadataFieldName primaryUriFieldName = new MetadataFieldName(
-                    configurationService.getProperty(CFG_PRIMARY_URI_METADATA, "dc.identifier.uri"));
-                itemService.clearMetadata(context, item,
-                                          primaryUriFieldName.schema,
-                                          primaryUriFieldName.element,
-                                          primaryUriFieldName.qualifier,
-                                          null);
-                itemService.addMetadata(context, item,
-                                        primaryUriFieldName.schema,
-                                        primaryUriFieldName.element,
-                                        primaryUriFieldName.qualifier,
-                                        null,
-                                        value);
-            }
-            if (!darkMetadataExists || configurationService.getBooleanProperty(CFG_PRIMARY_URI_ENABLED, false)) {
+            if (!darkMetadataExists) {
                 itemService.update(context, item);
             }
         } catch (SQLException | AuthorizeException e) {
@@ -453,7 +507,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         }
 
         Item item = (Item) dso;
-        String external = darkService.DARKToExternalForm(ark);
+        String external = darkService.formatIdentifier(ark);
         List<MetadataValue> metadata = itemService.getMetadata(item,
                                                                darkMetadataFieldName.schema,
                                                                darkMetadataFieldName.element,

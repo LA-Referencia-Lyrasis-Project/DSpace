@@ -13,7 +13,6 @@ import java.util.List;
 import org.dspace.content.DSpaceObject;
 import org.dspace.core.Context;
 import org.dspace.identifier.DARK;
-import org.dspace.identifier.IdentifierException;
 import org.dspace.identifier.dark.DarkIdentifierException;
 
 /**
@@ -37,10 +36,4 @@ public interface DarkService {
         throws SQLException;
 
     String formatIdentifier(String identifier) throws DarkIdentifierException;
-
-    String DARKToExternalForm(String identifier) throws IdentifierException;
-
-    String DARKFromExternalFormat(String identifier) throws DarkIdentifierException;
-
-    String getResolver();
 }

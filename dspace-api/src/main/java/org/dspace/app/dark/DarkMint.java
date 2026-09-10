@@ -7,8 +7,10 @@
  */
 package org.dspace.app.dark;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.cli.ParseException;
@@ -34,6 +36,7 @@ import org.dspace.utils.DSpace;
 public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
 
     private static final Logger log = LogManager.getLogger(DarkMint.class);
+    private static final int DEFAULT_BATCH_SIZE = 100;
 
     private enum MintResult {
         MINTED,
@@ -105,26 +108,46 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         int alreadyAssigned = 0;
         int missingMetadata = 0;
         int failed = 0;
+        int batchSize = configurationService.getIntProperty(DarkIdentifierProvider.CFG_BATCH_SIZE, DEFAULT_BATCH_SIZE);
+        if (batchSize < 1) {
+            batchSize = DEFAULT_BATCH_SIZE;
+        }
+        List<Item> batch = new ArrayList<>();
         Iterator<Item> items = itemService.findAll(context);
         while (items.hasNext()) {
             Item item = items.next();
             try {
-                switch (mintIfMissing(context, item)) {
-                    case MINTED:
-                        minted++;
-                        break;
-                    case ALREADY_ASSIGNED:
-                        alreadyAssigned++;
-                        break;
-                    case MISSING_METADATA:
-                        missingMetadata++;
-                        break;
-                    default:
-                        break;
+                MintResult result = checkMintable(context, item);
+                if (MintResult.ALREADY_ASSIGNED.equals(result)) {
+                    alreadyAssigned++;
+                } else if (MintResult.MISSING_METADATA.equals(result)) {
+                    missingMetadata++;
+                } else {
+                    batch.add(item);
+                    if (batch.size() >= batchSize) {
+                        try {
+                            minted += mintBatch(context, batch);
+                        } catch (Exception e) {
+                            failed += batch.size();
+                            log.error("Unable to mint dARK batch.", e);
+                        } finally {
+                            batch.clear();
+                        }
+                    }
                 }
             } catch (Exception e) {
                 failed++;
                 log.error("Unable to mint dARK for Item {}.", item.getID(), e);
+            }
+        }
+        if (!batch.isEmpty()) {
+            try {
+                minted += mintBatch(context, batch);
+            } catch (Exception e) {
+                failed += batch.size();
+                log.error("Unable to mint dARK batch.", e);
+            } finally {
+                batch.clear();
             }
         }
         handler.logInfo(String.format("dARK mint completed: %d minted, %d already assigned, " +
@@ -136,12 +159,24 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
     }
 
     private MintResult mintIfMissing(Context context, Item item) throws Exception {
+        MintResult result = checkMintable(context, item);
+        if (!MintResult.MINTED.equals(result)) {
+            return result;
+        }
+
+        identifierService.register(context, item, DARK.class);
+        handler.logInfo("Minted dARK for Item " + item.getID() + ".");
+        return MintResult.MINTED;
+    }
+
+    private MintResult checkMintable(Context context, Item item) throws Exception {
         String ark = identifierService.lookup(context, item, DARK.class);
         if (StringUtils.isNotBlank(ark)) {
             handler.logInfo("Item " + item.getID() + " already has dARK " + ark + ".");
             return MintResult.ALREADY_ASSIGNED;
         }
 
+        darkIdentifierProvider.checkMintable(context, item);
         List<String> missingMetadata = darkIdentifierProvider.missingRequiredMetadata(item);
         if (!missingMetadata.isEmpty()) {
             handler.logInfo("Item " + item.getID() + " skipped: missing required dARK metadata " +
@@ -149,8 +184,19 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             return MintResult.MISSING_METADATA;
         }
 
-        identifierService.register(context, item, DARK.class);
-        handler.logInfo("Minted dARK for Item " + item.getID() + ".");
         return MintResult.MINTED;
+    }
+
+    private int mintBatch(Context context, List<Item> batch) throws Exception {
+        Map<UUID, String> arks = darkIdentifierProvider.reserveBatch(context, batch);
+        for (Item item : batch) {
+            String ark = arks.get(item.getID());
+            if (StringUtils.isBlank(ark)) {
+                throw new IllegalStateException("dARK batch reservation returned no ARK for Item " + item.getID());
+            }
+            identifierService.register(context, item, ark);
+            handler.logInfo("Minted dARK for Item " + item.getID() + ".");
+        }
+        return batch.size();
     }
 }

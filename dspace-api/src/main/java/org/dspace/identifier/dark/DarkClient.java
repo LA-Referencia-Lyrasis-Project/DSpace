@@ -7,12 +7,17 @@
  */
 package org.dspace.identifier.dark;
 
+import java.util.List;
+
 /**
  * Client for the dARK minter API.
  */
 public interface DarkClient {
 
     DarkArkResponse reserveARK(String authorityId, String naan, String clientItemId)
+        throws DarkIdentifierException;
+
+    DarkBatchResponse reserveARKs(String authorityId, String naan, List<String> clientItemIds)
         throws DarkIdentifierException;
 
     DarkArkResponse getARK(String ark) throws DarkIdentifierException;
