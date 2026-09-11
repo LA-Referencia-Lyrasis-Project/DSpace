@@ -31,7 +31,7 @@ import org.dspace.services.factory.DSpaceServicesFactory;
 import org.dspace.utils.DSpace;
 
 /**
- * Mints dARK identifiers for one Item or for all archived Items without a dARK.
+ * Mints dARK identifiers or refreshes dARK publication status.
  */
 public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
 
@@ -74,8 +74,9 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
 
         boolean singleItem = commandLine.hasOption("uuid");
         boolean allItems = commandLine.hasOption("all");
-        if (singleItem == allItems) {
-            throw new IllegalArgumentException("Specify exactly one of --uuid <Item UUID> or --all.");
+        boolean refreshStatus = commandLine.hasOption("refresh-status");
+        if ((singleItem ? 1 : 0) + (allItems ? 1 : 0) + (refreshStatus ? 1 : 0) != 1) {
+            throw new IllegalArgumentException("Specify exactly one of --uuid <Item UUID>, --all, or --refresh-status.");
         }
 
         Context context = new Context();
@@ -83,8 +84,10 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         try {
             if (singleItem) {
                 mintOne(context, UUID.fromString(commandLine.getOptionValue("uuid")));
-            } else {
+            } else if (allItems) {
                 mintAll(context);
+            } else {
+                refreshPendingStatuses(context);
             }
             context.complete();
         } catch (Exception e) {
@@ -198,5 +201,16 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             handler.logInfo("Minted dARK for Item " + item.getID() + ".");
         }
         return batch.size();
+    }
+
+    private void refreshPendingStatuses(Context context) throws Exception {
+        DarkIdentifierProvider.StatusRefreshResult result = darkIdentifierProvider.refreshPendingStatuses(context);
+        handler.logInfo(String.format("dARK status refresh completed: %d checked, %d published, %d pending, %d failed.",
+                                      result.getChecked(), result.getPublished(), result.getPending(),
+                                      result.getFailed()));
+        if (result.getFailed() > 0) {
+            throw new IllegalStateException("dARK status refresh completed with " + result.getFailed() +
+                                            " failures.");
+        }
     }
 }

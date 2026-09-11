@@ -8,8 +8,6 @@
 package org.dspace.identifier.dao;
 
 import java.sql.SQLException;
-import java.util.List;
-
 import org.dspace.content.DSpaceObject;
 import org.dspace.core.Context;
 import org.dspace.core.GenericDAO;
@@ -24,6 +22,4 @@ public interface DarkDAO extends GenericDAO<DARK> {
 
     DARK findDARKByDSpaceObject(Context context, DSpaceObject dso) throws SQLException;
 
-    DARK findDARKByDSpaceObject(Context context, DSpaceObject dso, List<Integer> statusToExclude)
-        throws SQLException;
 }

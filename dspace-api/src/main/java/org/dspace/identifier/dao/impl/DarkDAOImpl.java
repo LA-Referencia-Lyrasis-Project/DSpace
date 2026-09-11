@@ -8,12 +8,8 @@
 package org.dspace.identifier.dao.impl;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.dspace.content.DSpaceObject;
 import org.dspace.core.AbstractHibernateDAO;
@@ -51,26 +47,4 @@ public class DarkDAOImpl extends AbstractHibernateDAO<DARK> implements DarkDAO {
         return singleResult(context, criteriaQuery);
     }
 
-    @Override
-    public DARK findDARKByDSpaceObject(Context context, DSpaceObject dso, List<Integer> statusToExclude)
-        throws SQLException {
-        CriteriaBuilder criteriaBuilder = getCriteriaBuilder(context);
-        CriteriaQuery criteriaQuery = getCriteriaQuery(criteriaBuilder, DARK.class);
-        Root<DARK> darkRoot = criteriaQuery.from(DARK.class);
-        criteriaQuery.select(darkRoot);
-
-        List<Predicate> listToIncludeInOrPredicate = new ArrayList<>(statusToExclude.size() + 1);
-        for (Integer status : statusToExclude) {
-            listToIncludeInOrPredicate.add(criteriaBuilder.notEqual(darkRoot.get(DARK_.status), status));
-        }
-        listToIncludeInOrPredicate.add(criteriaBuilder.isNull(darkRoot.get(DARK_.status)));
-
-        Predicate orPredicate = criteriaBuilder.or(listToIncludeInOrPredicate.toArray(new Predicate[] {}));
-        criteriaQuery.where(criteriaBuilder.and(
-            orPredicate,
-            criteriaBuilder.equal(darkRoot.get(DARK_.dSpaceObject), dso)
-        ));
-
-        return singleResult(context, criteriaQuery);
-    }
 }

@@ -88,7 +88,7 @@
     </bean>
 
     <bean id="dark-mint" class="org.dspace.app.dark.DarkMintScriptConfiguration">
-        <property name="description" value="Mint dARK identifiers for one Item or all archived Items without dARK"/>
+        <property name="description" value="Mint dARK identifiers or refresh pending dARK publication states"/>
         <property name="dspaceRunnableClass" value="org.dspace.app.dark.DarkMint"/>
     </bean>
 

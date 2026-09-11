@@ -33,8 +33,8 @@ DSpace after changing settings used by the server.
 ```properties
 identifier.dark.enabled = true
 identifier.dark.minter-api-url = http://localhost:8001/api/v1
-identifier.dark.resolver-api-url = http://localhost:8002/api/v1
-identifier.dark.authority-id = platform-demo
+identifier.dark.batch-size = 100
+identifier.dark.authority-id = platform-demo-1788435035
 identifier.dark.naan = 12345
 ```
 
@@ -51,18 +51,15 @@ identifier.dark.authority-header = X-Authority-Id
 In production, authority identity should use mTLS. The authority header exists
 for local profiles in which the Minter accepts it.
 
-### Public URI and identifier metadata
+### Identifier metadata
 
 ```properties
 identifier.dark.metadata = dc.identifier.dark
-identifier.dark.primary-uri.enabled = true
-identifier.dark.primary-uri.metadata = dc.identifier.uri
 ```
 
-The dARK is written to the field configured in `identifier.dark.metadata`. With
-`primary-uri.enabled = true`, the `dc.identifier.uri` value is replaced with the
-dARK resolver URL. The Handle remains internally associated with the Item and
-continues to be resolved by DSpace.
+The dARK is written only to the field configured in
+`identifier.dark.metadata`, in compact form such as `ark:12345/2000000004k`.
+It does not replace the Handle, `dc.identifier`, or `dc.identifier.uri`.
 
 ### Metadata mapping
 
@@ -112,36 +109,48 @@ sequenceDiagram
     end
     P->>P: build Level 1 and OAI-DC Level 2
     P->>M: PUT /arks/{ark}
-    M-->>P: state and CIDs
-    P->>DB: update Item state and metadata
-    P-->>D: ark:/NAAN/nome
+    M-->>P: accepted state (D or U) and CIDs
+    P->>DB: update local association and Item metadata
+    P->>M: GET /arks/{ark}
+    M-->>P: current state and CIDs
+    P->>DB: refresh local state and CIDs
+    P-->>D: ark:NAAN/nome
 ```
 
-  DSpace stores the canonical form `ark:/12345/name`. The Minter uses the URL
-  path form `ark:12345/name`; conversion occurs only at the HTTP boundary. This
-  avoids duplicate local records caused by slash differences.
+DSpace stores the canonical compact form `ark:12345/name`. It accepts the
+legacy slash form `ark:/12345/name` at the provider boundary and normalizes it
+before persisting, avoiding duplicate local records caused by format
+differences.
 
-  The payload sent to the Minter contains Level 1 metadata, an alternate
-  identifier with the Item UUID, the target URL, and an OAI-DC representation for
-  Level 2. The response updates the identifier state and CIDs returned by the
-  Minter.
+The payload sent to the Minter contains Level 1 metadata, an alternate
+identifier with the Item UUID, the target URL, and an OAI-DC representation for
+Level 2. After accepting the `PUT`, the Minter publishes asynchronously. The
+provider immediately performs one `GET /arks/{ark}` and persists the most
+recent state and CIDs. If it already observes `PUBLISHED` (`P`), the local
+association is marked as published. A `DRAFT` (`D`) or `UPDATE` (`U`) response
+is valid and does not block Item registration; a temporary read failure is
+logged as a warning and does not undo the accepted metadata update.
 
-  If required metadata is absent during the automatic flow, the Minter API may
-  reject the registration. For existing repository content, use the CLI, which
-  performs preflight before reserving an ARK.
+If required metadata is absent during the automatic flow, the Minter API may
+reject the registration. For existing repository content, use the CLI, which
+performs preflight before reserving an ARK.
 
-  ## Command-line assignment
+## Command-line assignment
 
-  The script is registered as `dark-mint` and requires the provider to be enabled.
-  Run it from the DSpace installation directory:
+The script is registered as `dark-mint` and requires the provider to be enabled.
+Run it from the DSpace installation directory:
 
 ```bash
 bin/dspace dark-mint --uuid <uuid-do-item>
 bin/dspace dark-mint --all
+bin/dspace dark-mint --refresh-status
 ```
 
 `--uuid` processes exactly one Item. `--all` traverses all Items and attempts
-only those without a dARK. The options are mutually exclusive.
+only those without a dARK. `--refresh-status` queries `GET /arks/{ark}` only
+for local dARKs in `DRAFT` (`D`) or `UPDATE` (`U`), then persists the returned
+state and CIDs. It does not reserve identifiers or submit metadata. The options
+are mutually exclusive.
 
 For each Item, the command performs this sequence:
 
@@ -150,13 +159,20 @@ For each Item, the command performs this sequence:
 3. Validates the author and year in the configured fallback fields.
 4. If a requirement is missing, logs the Item as `skipped` and does not reserve
   an ARK.
-5. If preflight succeeds, delegates to `IdentifierService.register`, which
-  reserves, registers remotely, and persists the result.
+5. If preflight succeeds, `--uuid` delegates reservation and registration to
+  `IdentifierService.register`.
+6. For `--all`, eligible Items are reserved in batches of
+  `identifier.dark.batch-size`, then each Item is registered remotely and
+  persisted individually.
 
 At the end of `--all`, the script reports counts for `minted`, `already assigned`,
 `skipped for missing metadata`, and `failed`. A failure for one Item does not
 stop the traversal; at the end, the command exits with an error if any failure
 occurred.
+
+`--refresh-status` reports the number of dARKs checked, published, still
+pending, and failed. It can be run repeatedly by an administrator or a cron
+job until pending records reach `PUBLISHED`.
 
 Example preflight result for an Item without an author:
 
@@ -173,6 +189,11 @@ The migration creates the sequence and `dark` table. Each row associates an
 `Item` with a unique ARK and stores, among other data, its state,
 `client_item_id`, target URL, and metadata CIDs. Indexes support lookups by ARK
 and DSpace object.
+
+The `dark.status` column stores the dARK Minter state code directly: `R`
+(reserved), `D` (draft), `U` (update), `P` (published), or `T` (tombstone).
+The local `tombstone_requested` flag is separate from those remote states and is
+set only after removal from the Item, until the Minter confirms `T`.
 
 Migrations are provided for PostgreSQL and H2. They must be applied through the
 standard DSpace update process before enabling the provider in a new database.

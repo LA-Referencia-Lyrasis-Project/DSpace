@@ -9,7 +9,6 @@ package org.dspace.identifier;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,28 +53,36 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
     public static final String CFG_DARK_METADATA = "identifier.dark.metadata";
     public static final String CFG_BATCH_SIZE = "identifier.dark.batch-size";
 
-    public static final Integer TO_BE_RESERVED = 1;
-    public static final Integer RESERVED = 2;
-    public static final Integer TO_BE_REGISTERED = 3;
-    public static final Integer DRAFT = 4;
-    public static final Integer UPDATE = 5;
-    public static final Integer PUBLISHED = 6;
-    public static final Integer TO_BE_TOMBSTONED = 7;
-    public static final Integer TOMBSTONED = 8;
-    public static final Integer MINTED = 9;
+    public static final String RESERVED = "R";
+    public static final String DRAFT = "D";
+    public static final String UPDATE = "U";
+    public static final String PUBLISHED = "P";
+    public static final String TOMBSTONED = "T";
 
-    public static final String[] statusText = {
-        "UNKNOWN",
-        "TO_BE_RESERVED",
-        "RESERVED",
-        "TO_BE_REGISTERED",
-        "DRAFT",
-        "UPDATE",
-        "PUBLISHED",
-        "TO_BE_TOMBSTONED",
-        "TOMBSTONED",
-        "MINTED"
-    };
+    /** Summary of a refresh of dARKs pending asynchronous Minter processing. */
+    public static final class StatusRefreshResult {
+
+        private int checked;
+        private int published;
+        private int pending;
+        private int failed;
+
+        public int getChecked() {
+            return checked;
+        }
+
+        public int getPublished() {
+            return published;
+        }
+
+        public int getPending() {
+            return pending;
+        }
+
+        public int getFailed() {
+            return failed;
+        }
+    }
 
     public MetadataFieldName darkMetadataFieldName;
 
@@ -170,6 +177,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
             applyResponse(dark, response);
             darkService.update(context, dark);
             saveDARKToObject(context, dso, ark);
+            refreshStatus(context, dark, ark);
             log.info("Registered dARK {} for Item {} with state {}.", ark, dso.getID(), response.getState());
         } catch (DarkIdentifierException e) {
             log.error("Unable to register dARK {} for Item {}.", ark, dso.getID(), e);
@@ -202,8 +210,8 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
 
         String ark = darkService.formatIdentifier(identifier);
         DARK dark = loadOrCreateDARK(context, dso, ark, filter);
-        if (dark.getStatus() == null || MINTED.equals(dark.getStatus())) {
-            dark.setStatus(TO_BE_RESERVED);
+        if (dark.getStatus() == null) {
+            dark.setStatus(RESERVED);
             darkService.update(context, dark);
         }
         saveDARKToObject(context, dso, ark);
@@ -378,7 +386,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
             removeDARKFromObject(context, dso, ark);
             if (dark != null) {
                 dark.setDSpaceObject(null);
-                dark.setStatus(TO_BE_TOMBSTONED);
+                dark.setTombstoneRequested(true);
                 darkService.update(context, dark);
             }
         } catch (SQLException e) {
@@ -409,12 +417,13 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         if (dark == null) {
             throw new DarkIdentifierException("Unable to find dARK.", DarkIdentifierException.DARK_DOES_NOT_EXIST);
         }
-        if (!TO_BE_TOMBSTONED.equals(dark.getStatus())) {
+        if (!dark.isTombstoneRequested()) {
             throw new IllegalArgumentException("Delete the dARK locally before tombstoning it online: " + ark);
         }
 
         darkClient.tombstoneARK(ark, getAuthorityId());
         dark.setStatus(TOMBSTONED);
+        dark.setTombstoneRequested(false);
         darkService.update(context, dark);
     }
 
@@ -435,16 +444,13 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         dark.setArk(arkIdentifier);
         dark.setDSpaceObject(dso);
         dark.setClientItemId(dso.getID().toString());
-        if (dark.getStatus() == null) {
-            dark.setStatus(MINTED);
-        }
         darkService.update(context, dark);
         return dark;
     }
 
     public String getDARKByObject(Context context, DSpaceObject dso) throws SQLException {
-        DARK dark = darkService.findDARKByDSpaceObject(context, dso, Arrays.asList(TOMBSTONED, TO_BE_TOMBSTONED));
-        if (dark == null) {
+        DARK dark = darkService.findDARKByDSpaceObject(context, dso);
+        if (dark == null || isTombstoned(dark)) {
             return null;
         }
         if (dark.getArk() == null) {
@@ -461,6 +467,43 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
      */
     public List<String> missingRequiredMetadata(Item item) {
         return metadataBuilder.missingRequiredMetadata(item);
+    }
+
+    /**
+     * Refreshes local state for all dARKs that are awaiting Minter publication or update.
+     *
+     * @param context DSpace context
+     * @return refresh summary
+     * @throws SQLException if pending dARKs cannot be read from the local database
+     */
+    public StatusRefreshResult refreshPendingStatuses(Context context) throws SQLException {
+        StatusRefreshResult result = new StatusRefreshResult();
+        for (DARK dark : darkService.findAll(context)) {
+            if (!DRAFT.equals(dark.getStatus()) && !UPDATE.equals(dark.getStatus())) {
+                continue;
+            }
+
+            result.checked++;
+            if (StringUtils.isBlank(dark.getArk())) {
+                result.failed++;
+                log.warn("Cannot refresh a pending dARK with an empty ARK for local record {}.", dark.getID());
+                continue;
+            }
+
+            try {
+                if (!refreshStatus(context, dark, dark.getArk())) {
+                    result.failed++;
+                } else if (PUBLISHED.equals(dark.getStatus())) {
+                    result.published++;
+                } else {
+                    result.pending++;
+                }
+            } catch (SQLException | IdentifierException e) {
+                result.failed++;
+                log.warn("Unable to refresh dARK {} status.", dark.getArk(), e);
+            }
+        }
+        return result;
     }
 
     protected void saveDARKToObject(Context context, DSpaceObject dso, String ark)
@@ -588,7 +631,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         if (StringUtils.isNotBlank(response.getArk())) {
             dark.setArk(darkService.formatIdentifier(response.getArk()));
         }
-        Integer status = statusFromState(response.getState());
+        String status = statusFromState(response.getState());
         if (status != null) {
             dark.setStatus(status);
         }
@@ -601,26 +644,32 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         }
     }
 
-    private Integer statusFromState(String state) {
-        if ("R".equals(state)) {
-            return RESERVED;
+    /**
+     * Refreshes the local state after metadata submission without waiting for the asynchronous minter workers.
+     */
+    private boolean refreshStatus(Context context, DARK dark, String ark) throws SQLException, IdentifierException {
+        try {
+            DarkArkResponse response = darkClient.getARK(ark);
+            applyResponse(dark, response);
+            darkService.update(context, dark);
+            log.info("Refreshed dARK {} after metadata update; current state is {}.", ark, response.getState());
+            return true;
+        } catch (DarkIdentifierException e) {
+            // The PUT succeeded, so a temporary read failure must not undo Item registration.
+            log.warn("dARK {} metadata was submitted, but its current state could not be refreshed.", ark, e);
+            return false;
         }
-        if ("D".equals(state)) {
-            return DRAFT;
-        }
-        if ("U".equals(state)) {
-            return UPDATE;
-        }
-        if ("P".equals(state)) {
-            return PUBLISHED;
-        }
-        if ("T".equals(state)) {
-            return TOMBSTONED;
+    }
+
+    private String statusFromState(String state) {
+        if (RESERVED.equals(state) || DRAFT.equals(state) || UPDATE.equals(state) ||
+            PUBLISHED.equals(state) || TOMBSTONED.equals(state)) {
+            return state;
         }
         return null;
     }
 
     private boolean isTombstoned(DARK dark) {
-        return TOMBSTONED.equals(dark.getStatus()) || TO_BE_TOMBSTONED.equals(dark.getStatus());
+        return TOMBSTONED.equals(dark.getStatus()) || dark.isTombstoneRequested();
     }
 }

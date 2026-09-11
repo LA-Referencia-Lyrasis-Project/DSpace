@@ -68,12 +68,6 @@ public class DarkServiceImpl implements DarkService {
     }
 
     @Override
-    public DARK findDARKByDSpaceObject(Context context, DSpaceObject dso, List<Integer> statusToExclude)
-        throws SQLException {
-        return darkDAO.findDARKByDSpaceObject(context, dso, statusToExclude);
-    }
-
-    @Override
     public String formatIdentifier(String identifier) throws DarkIdentifierException {
         if (identifier == null) {
             throw new IllegalArgumentException("Identifier is null.", new NullPointerException());

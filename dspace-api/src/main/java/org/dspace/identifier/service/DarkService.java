@@ -32,8 +32,5 @@ public interface DarkService {
 
     DARK findDARKByDSpaceObject(Context context, DSpaceObject dso) throws SQLException;
 
-    DARK findDARKByDSpaceObject(Context context, DSpaceObject dso, List<Integer> statusToExclude)
-        throws SQLException;
-
     String formatIdentifier(String identifier) throws DarkIdentifierException;
 }

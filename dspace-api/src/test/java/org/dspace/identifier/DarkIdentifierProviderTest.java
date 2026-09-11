@@ -9,7 +9,6 @@ package org.dspace.identifier;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -36,6 +35,7 @@ import org.dspace.identifier.dark.DarkArkResponse;
 import org.dspace.identifier.dark.DarkBatchResponse;
 import org.dspace.identifier.dark.DarkClient;
 import org.dspace.identifier.dark.DarkMetadataBuilder;
+import org.dspace.identifier.dark.DarkMetadataRequest;
 import org.dspace.identifier.service.DarkService;
 import org.dspace.servicemanager.DSpaceKernelImpl;
 import org.dspace.servicemanager.DSpaceKernelInit;
@@ -130,7 +130,7 @@ public class DarkIdentifierProviderTest {
         storedDARK = new AtomicReference<>();
         storedDARKs = new ArrayList<>();
         when(darkService.create(context)).thenAnswer((Answer<DARK>) invocation -> new DARK());
-        when(darkService.findDARKByDSpaceObject(eq(context), eq(item), anyList()))
+        when(darkService.findDARKByDSpaceObject(eq(context), eq(item)))
             .thenAnswer(invocation -> storedDARK.get());
         doAnswer(invocation -> {
             DARK dark = invocation.getArgument(1);
@@ -181,7 +181,7 @@ public class DarkIdentifierProviderTest {
         when(secondItem.getID()).thenReturn(secondItemId);
         when(dsoService.getTypeText(secondItem)).thenReturn("ITEM");
         when(provider.contentServiceFactory.getDSpaceObjectService(secondItem)).thenReturn(dsoService);
-        when(darkService.findDARKByDSpaceObject(eq(context), eq(secondItem), anyList())).thenReturn(null);
+        when(darkService.findDARKByDSpaceObject(eq(context), eq(secondItem))).thenReturn(null);
         when(darkService.formatIdentifier("ark:12345/def456")).thenReturn("ark:12345/def456");
 
         DarkArkResponse firstResponse = new DarkArkResponse();
@@ -208,5 +208,82 @@ public class DarkIdentifierProviderTest {
         verify(darkClient).reserveARKs("platform-demo-1788435035", "12345",
                                        List.of(item.getID().toString(), secondItemId.toString()));
         verify(darkClient, never()).reserveARK(any(), any(), any());
+    }
+
+    @Test
+    public void testRegisterRefreshesPublishedStateAfterMetadataUpdate() throws Exception {
+        DarkMetadataRequest request = new DarkMetadataRequest();
+        when(provider.metadataBuilder.build(eq(context), eq(item), eq("platform-demo-1788435035"),
+                                            eq("ark:12345/abc123"))).thenReturn(request);
+        when(provider.itemService.getMetadata(any(Item.class), eq("dc"), eq("identifier"), eq("dark"),
+                                              org.mockito.ArgumentMatchers.isNull()))
+            .thenReturn(java.util.Collections.emptyList());
+
+        DarkArkResponse staged = new DarkArkResponse();
+        staged.setArk("ark:12345/abc123");
+        staged.setState("D");
+        when(darkClient.updateMetadata("ark:12345/abc123", request)).thenReturn(staged);
+
+        DarkArkResponse published = new DarkArkResponse();
+        published.setArk("ark:12345/abc123");
+        published.setState("P");
+        published.setLevel1Cid("level-1-cid");
+        published.setLevel2Cid("level-2-cid");
+        when(darkClient.getARK("ark:12345/abc123")).thenReturn(published);
+
+        provider.register(context, item, "ark:12345/abc123");
+
+        verify(darkClient).updateMetadata("ark:12345/abc123", request);
+        verify(darkClient).getARK("ark:12345/abc123");
+        assertEquals(DarkIdentifierProvider.PUBLISHED, storedDARK.get().getStatus());
+        assertEquals("level-1-cid", storedDARK.get().getLevel1Cid());
+        assertEquals("level-2-cid", storedDARK.get().getLevel2Cid());
+    }
+
+    @Test
+    public void testLocalTombstoneRequestHidesDarkFromItemLookup() throws Exception {
+        DARK dark = new DARK();
+        dark.setArk("ark:12345/abc123");
+        dark.setTombstoneRequested(true);
+        storedDARK.set(dark);
+
+        assertEquals(null, provider.getDARKByObject(context, item));
+    }
+
+    @Test
+    public void testRefreshPendingStatusesChecksOnlyDraftAndUpdate() throws Exception {
+        DARK updating = new DARK();
+        updating.setArk("ark:12345/updating");
+        updating.setStatus(DarkIdentifierProvider.UPDATE);
+
+        DARK drafting = new DARK();
+        drafting.setArk("ark:12345/drafting");
+        drafting.setStatus(DarkIdentifierProvider.DRAFT);
+
+        DARK published = new DARK();
+        published.setArk("ark:12345/published");
+        published.setStatus(DarkIdentifierProvider.PUBLISHED);
+        when(darkService.findAll(context)).thenReturn(List.of(updating, drafting, published));
+
+        DarkArkResponse publishedResponse = new DarkArkResponse();
+        publishedResponse.setState("P");
+        publishedResponse.setArk("ark:12345/updating");
+        when(darkClient.getARK("ark:12345/updating")).thenReturn(publishedResponse);
+
+        DarkArkResponse pendingResponse = new DarkArkResponse();
+        pendingResponse.setState("D");
+        pendingResponse.setArk("ark:12345/drafting");
+        when(darkClient.getARK("ark:12345/drafting")).thenReturn(pendingResponse);
+
+        DarkIdentifierProvider.StatusRefreshResult result = provider.refreshPendingStatuses(context);
+
+        assertEquals(2, result.getChecked());
+        assertEquals(1, result.getPublished());
+        assertEquals(1, result.getPending());
+        assertEquals(0, result.getFailed());
+        assertEquals(DarkIdentifierProvider.PUBLISHED, updating.getStatus());
+        verify(darkClient).getARK("ark:12345/updating");
+        verify(darkClient).getARK("ark:12345/drafting");
+        verify(darkClient, never()).getARK("ark:12345/published");
     }
 }
