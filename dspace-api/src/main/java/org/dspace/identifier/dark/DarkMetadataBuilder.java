@@ -83,7 +83,8 @@ public class DarkMetadataBuilder {
         String date = firstValue(item, CFG_DATE_METADATA, DEFAULT_DATE_METADATA);
         putIfPresent(minimalMetadata, "date", date);
         putIfPresent(minimalMetadata, "year", extractYear(date));
-        putIfPresent(minimalMetadata, "publisher", firstValue(item, CFG_PUBLISHER_METADATA, DEFAULT_PUBLISHER_METADATA));
+        putIfPresent(minimalMetadata, "publisher",
+                     firstValue(item, CFG_PUBLISHER_METADATA, DEFAULT_PUBLISHER_METADATA));
         putIfPresent(minimalMetadata, "resource_type", firstValue(item, CFG_TYPE_METADATA, DEFAULT_TYPE_METADATA));
         putIfPresent(minimalMetadata, "language", firstValue(item, CFG_LANGUAGE_METADATA, DEFAULT_LANGUAGE_METADATA));
         putIfPresent(minimalMetadata, "abstract", firstValue(item, CFG_ABSTRACT_METADATA, DEFAULT_ABSTRACT_METADATA));

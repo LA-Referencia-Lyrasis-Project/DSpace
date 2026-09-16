@@ -170,9 +170,12 @@ At the end of `--all`, the script reports counts for `minted`, `already assigned
 stop the traversal; at the end, the command exits with an error if any failure
 occurred.
 
-`--refresh-status` reports the number of dARKs checked, published, still
-pending, and failed. It can be run repeatedly by an administrator or a cron
-job until pending records reach `PUBLISHED`.
+`--refresh-status` uses `identifier.dark.batch-size` to commit local updates
+per batch. The dARK API currently exposes status only per ARK, so each batch
+still performs one `GET /arks/{ark}` request for each pending ARK. It reports
+the number of dARKs checked, published, still pending, and failed. It can be
+run repeatedly by an administrator or a cron job until pending records reach
+`PUBLISHED`.
 
 Example preflight result for an Item without an author:
 

@@ -76,22 +76,23 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         boolean allItems = commandLine.hasOption("all");
         boolean refreshStatus = commandLine.hasOption("refresh-status");
         if ((singleItem ? 1 : 0) + (allItems ? 1 : 0) + (refreshStatus ? 1 : 0) != 1) {
-            throw new IllegalArgumentException("Specify exactly one of --uuid <Item UUID>, --all, or --refresh-status.");
+            throw new IllegalArgumentException(
+                "Specify exactly one of --uuid <Item UUID>, --all, or --refresh-status.");
         }
 
         if (allItems) {
             mintAll();
             return;
         }
+        if (refreshStatus) {
+            refreshPendingStatuses();
+            return;
+        }
 
         Context context = new Context();
         context.turnOffAuthorisationSystem();
         try {
-            if (singleItem) {
-                mintOne(context, UUID.fromString(commandLine.getOptionValue("uuid")));
-            } else {
-                refreshPendingStatuses(context);
-            }
+            mintOne(context, UUID.fromString(commandLine.getOptionValue("uuid")));
             context.complete();
         } catch (Exception e) {
             context.abort();
@@ -255,14 +256,74 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         return MintResult.MINTED;
     }
 
-    private void refreshPendingStatuses(Context context) throws Exception {
-        DarkIdentifierProvider.StatusRefreshResult result = darkIdentifierProvider.refreshPendingStatuses(context);
-        handler.logInfo(String.format("dARK status refresh completed: %d checked, %d published, %d pending, %d failed.",
-                                      result.getChecked(), result.getPublished(), result.getPending(),
-                                      result.getFailed()));
-        if (result.getFailed() > 0) {
-            throw new IllegalStateException("dARK status refresh completed with " + result.getFailed() +
-                                            " failures.");
+    private void refreshPendingStatuses() throws Exception {
+        List<String> pendingArks = findPendingARKs();
+
+        int batchSize = configurationService.getIntProperty(DarkIdentifierProvider.CFG_BATCH_SIZE, DEFAULT_BATCH_SIZE);
+        if (batchSize < 1) {
+            batchSize = DEFAULT_BATCH_SIZE;
         }
+
+        int checked = 0;
+        int published = 0;
+        int pending = 0;
+        int failed = 0;
+        for (int start = 0; start < pendingArks.size(); start += batchSize) {
+            int end = Math.min(start + batchSize, pendingArks.size());
+            StatusRefreshSummary summary = refreshStatusBatch(pendingArks.subList(start, end));
+            checked += summary.checked;
+            published += summary.published;
+            pending += summary.pending;
+            failed += summary.failed;
+        }
+        handler.logInfo(String.format("dARK status refresh completed: %d checked, %d published, %d pending, %d failed.",
+                                      checked, published, pending, failed));
+        if (failed > 0) {
+            throw new IllegalStateException("dARK status refresh completed with " + failed + " failures.");
+        }
+    }
+
+    private List<String> findPendingARKs() throws Exception {
+        Context context = new Context();
+        context.turnOffAuthorisationSystem();
+        try {
+            List<String> arks = darkIdentifierProvider.findPendingARKs(context);
+            context.complete();
+            return arks;
+        } catch (Exception e) {
+            context.abort();
+            throw e;
+        } finally {
+            context.restoreAuthSystemState();
+        }
+    }
+
+    private StatusRefreshSummary refreshStatusBatch(List<String> arks) {
+        StatusRefreshSummary summary = new StatusRefreshSummary();
+        Context context = new Context();
+        context.turnOffAuthorisationSystem();
+        try {
+            DarkIdentifierProvider.StatusRefreshResult result =
+                darkIdentifierProvider.refreshPendingStatuses(context, arks);
+            context.complete();
+            summary.checked = result.getChecked();
+            summary.published = result.getPublished();
+            summary.pending = result.getPending();
+            summary.failed = result.getFailed();
+        } catch (Exception e) {
+            summary.failed = arks.size();
+            log.error("Unable to refresh dARK status batch.", e);
+            context.abort();
+        } finally {
+            context.restoreAuthSystemState();
+        }
+        return summary;
+    }
+
+    private static class StatusRefreshSummary {
+        private int checked;
+        private int published;
+        private int pending;
+        private int failed;
     }
 }

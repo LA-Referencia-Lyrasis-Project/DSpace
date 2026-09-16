@@ -264,6 +264,8 @@ public class DarkIdentifierProviderTest {
         published.setArk("ark:12345/published");
         published.setStatus(DarkIdentifierProvider.PUBLISHED);
         when(darkService.findAll(context)).thenReturn(List.of(updating, drafting, published));
+        when(darkService.findByArk(context, "ark:12345/updating")).thenReturn(updating);
+        when(darkService.findByArk(context, "ark:12345/drafting")).thenReturn(drafting);
 
         DarkArkResponse publishedResponse = new DarkArkResponse();
         publishedResponse.setState("P");
@@ -284,6 +286,20 @@ public class DarkIdentifierProviderTest {
         assertEquals(DarkIdentifierProvider.PUBLISHED, updating.getStatus());
         verify(darkClient).getARK("ark:12345/updating");
         verify(darkClient).getARK("ark:12345/drafting");
+        verify(darkClient, never()).getARK("ark:12345/published");
+    }
+
+    @Test
+    public void testRefreshPendingStatusesSkipsARKsThatAreNoLongerPending() throws Exception {
+        DARK published = new DARK();
+        published.setArk("ark:12345/published");
+        published.setStatus(DarkIdentifierProvider.PUBLISHED);
+        when(darkService.findByArk(context, "ark:12345/published")).thenReturn(published);
+
+        DarkIdentifierProvider.StatusRefreshResult result =
+            provider.refreshPendingStatuses(context, List.of("ark:12345/published"));
+
+        assertEquals(0, result.getChecked());
         verify(darkClient, never()).getARK("ark:12345/published");
     }
 }

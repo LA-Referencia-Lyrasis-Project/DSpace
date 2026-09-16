@@ -304,7 +304,8 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
                 DARK dark = darkService.create(context);
                 dark.setArk(darkService.formatIdentifier(arkResponse.getArk()));
                 dark.setDSpaceObject(item);
-                dark.setClientItemId(StringUtils.defaultIfBlank(arkResponse.getClientItemId(), item.getID().toString()));
+                dark.setClientItemId(
+                    StringUtils.defaultIfBlank(arkResponse.getClientItemId(), item.getID().toString()));
                 applyResponse(dark, arkResponse);
                 if (dark.getStatus() == null) {
                     dark.setStatus(RESERVED);
@@ -477,21 +478,46 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
      * @throws SQLException if pending dARKs cannot be read from the local database
      */
     public StatusRefreshResult refreshPendingStatuses(Context context) throws SQLException {
-        StatusRefreshResult result = new StatusRefreshResult();
+        return refreshPendingStatuses(context, findPendingARKs(context));
+    }
+
+    /**
+     * Finds the ARKs which are waiting for asynchronous Minter processing.
+     *
+     * @param context DSpace context
+     * @return pending ARKs
+     * @throws SQLException if local dARKs cannot be read
+     */
+    public List<String> findPendingARKs(Context context) throws SQLException {
+        List<String> arks = new ArrayList<>();
         for (DARK dark : darkService.findAll(context)) {
-            if (!DRAFT.equals(dark.getStatus()) && !UPDATE.equals(dark.getStatus())) {
+            if ((DRAFT.equals(dark.getStatus()) || UPDATE.equals(dark.getStatus())) &&
+                StringUtils.isNotBlank(dark.getArk())) {
+                arks.add(dark.getArk());
+            }
+        }
+        return arks;
+    }
+
+    /**
+     * Refreshes a known group of pending dARKs. The caller owns the transaction so CLI jobs can commit per batch.
+     *
+     * @param context DSpace context
+     * @param arks ARKs to refresh
+     * @return refresh summary
+     * @throws SQLException if local dARKs cannot be read
+     */
+    public StatusRefreshResult refreshPendingStatuses(Context context, List<String> arks) throws SQLException {
+        StatusRefreshResult result = new StatusRefreshResult();
+        for (String ark : arks) {
+            DARK dark = darkService.findByArk(context, ark);
+            if (dark == null || (!DRAFT.equals(dark.getStatus()) && !UPDATE.equals(dark.getStatus()))) {
                 continue;
             }
 
             result.checked++;
-            if (StringUtils.isBlank(dark.getArk())) {
-                result.failed++;
-                log.warn("Cannot refresh a pending dARK with an empty ARK for local record {}.", dark.getID());
-                continue;
-            }
-
             try {
-                if (!refreshStatus(context, dark, dark.getArk())) {
+                if (!refreshStatus(context, dark, ark)) {
                     result.failed++;
                 } else if (PUBLISHED.equals(dark.getStatus())) {
                     result.published++;
@@ -500,7 +526,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
                 }
             } catch (SQLException | IdentifierException e) {
                 result.failed++;
-                log.warn("Unable to refresh dARK {} status.", dark.getArk(), e);
+                log.warn("Unable to refresh dARK {} status.", ark, e);
             }
         }
         return result;
