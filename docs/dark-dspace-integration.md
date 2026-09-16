@@ -146,8 +146,11 @@ bin/dspace dark-mint --all
 bin/dspace dark-mint --refresh-status
 ```
 
-`--uuid` processes exactly one Item. `--all` traverses all Items and attempts
-only those without a dARK. `--refresh-status` queries `GET /arks/{ark}` only
+`--uuid` processes exactly one Item. `--all` queries only Items without a local
+dARK association, then attempts to mint one for each returned Item. `--count-local`
+reports the number of Items with a local dARK association without calling the
+dARK API or changing data.
+`--refresh-status` queries `GET /arks/{ark}` only
 for local dARKs in `DRAFT` (`D`) or `UPDATE` (`U`), then persists the returned
 state and CIDs. It does not reserve identifiers or submit metadata. The options
 are mutually exclusive.

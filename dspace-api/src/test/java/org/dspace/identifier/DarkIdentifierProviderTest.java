@@ -302,4 +302,19 @@ public class DarkIdentifierProviderTest {
         assertEquals(0, result.getChecked());
         verify(darkClient, never()).getARK("ark:12345/published");
     }
+
+    @Test
+    public void testFindItemIdsWithoutDARKDelegatesToDarkService() throws Exception {
+        UUID itemId = UUID.randomUUID();
+        when(darkService.findItemIdsWithoutDARK(context)).thenReturn(List.of(itemId));
+
+        assertEquals(List.of(itemId), provider.findItemIdsWithoutDARK(context));
+    }
+
+    @Test
+    public void testCountItemsWithDARKDelegatesToDarkService() throws Exception {
+        when(darkService.countItemsWithDARK(context)).thenReturn(42L);
+
+        assertEquals(42L, provider.countItemsWithDARK(context));
+    }
 }

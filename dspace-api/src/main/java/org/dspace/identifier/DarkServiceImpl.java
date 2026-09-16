@@ -9,6 +9,7 @@ package org.dspace.identifier;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.dspace.content.DSpaceObject;
@@ -65,6 +66,16 @@ public class DarkServiceImpl implements DarkService {
     @Override
     public DARK findDARKByDSpaceObject(Context context, DSpaceObject dso) throws SQLException {
         return darkDAO.findDARKByDSpaceObject(context, dso);
+    }
+
+    @Override
+    public List<UUID> findItemIdsWithoutDARK(Context context) throws SQLException {
+        return darkDAO.findItemIdsWithoutDARK(context);
+    }
+
+    @Override
+    public long countItemsWithDARK(Context context) throws SQLException {
+        return darkDAO.countItemsWithDARK(context);
     }
 
     @Override

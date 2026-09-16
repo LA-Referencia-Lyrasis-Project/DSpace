@@ -461,6 +461,28 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
     }
 
     /**
+     * Finds Item UUIDs without a local dARK association.
+     *
+     * @param context DSpace context
+     * @return Item UUIDs without a dARK
+     * @throws SQLException if the local dARK association cannot be read
+     */
+    public List<UUID> findItemIdsWithoutDARK(Context context) throws SQLException {
+        return darkService.findItemIdsWithoutDARK(context);
+    }
+
+    /**
+     * Counts Items with a local dARK association.
+     *
+     * @param context DSpace context
+     * @return number of Items with a dARK
+     * @throws SQLException if the local dARK association cannot be read
+     */
+    public long countItemsWithDARK(Context context) throws SQLException {
+        return darkService.countItemsWithDARK(context);
+    }
+
+    /**
      * Returns the configured Level 1 metadata fields required before registering an Item with dARK.
      *
      * @param item Item to validate

@@ -8,11 +8,14 @@
 package org.dspace.identifier.dao.impl;
 
 import java.sql.SQLException;
+import java.util.List;
+import java.util.UUID;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
 import org.dspace.core.AbstractHibernateDAO;
 import org.dspace.core.Context;
 import org.dspace.identifier.DARK;
@@ -46,6 +49,20 @@ public class DarkDAOImpl extends AbstractHibernateDAO<DARK> implements DarkDAO {
         criteriaQuery.select(darkRoot);
         criteriaQuery.where(criteriaBuilder.equal(darkRoot.get(DARK_.dSpaceObject), dso));
         return singleResult(context, criteriaQuery);
+    }
+
+    @Override
+    public List<UUID> findItemIdsWithoutDARK(Context context) throws SQLException {
+        String query = "SELECT i.id FROM " + Item.class.getSimpleName() + " i WHERE NOT EXISTS " +
+            "(SELECT d.id FROM " + DARK.class.getSimpleName() + " d WHERE d.dSpaceObject = i)";
+        return getHibernateSession(context).createQuery(query, UUID.class).getResultList();
+    }
+
+    @Override
+    public long countItemsWithDARK(Context context) throws SQLException {
+        String query = "SELECT COUNT(i.id) FROM " + Item.class.getSimpleName() + " i WHERE EXISTS " +
+            "(SELECT d.id FROM " + DARK.class.getSimpleName() + " d WHERE d.dSpaceObject = i)";
+        return getHibernateSession(context).createQuery(query, Long.class).getSingleResult();
     }
 
 }

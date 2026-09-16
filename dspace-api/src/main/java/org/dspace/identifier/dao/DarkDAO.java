@@ -8,6 +8,8 @@
 package org.dspace.identifier.dao;
 
 import java.sql.SQLException;
+import java.util.List;
+import java.util.UUID;
 
 import org.dspace.content.DSpaceObject;
 import org.dspace.core.Context;
@@ -22,5 +24,9 @@ public interface DarkDAO extends GenericDAO<DARK> {
     DARK findByArk(Context context, String ark) throws SQLException;
 
     DARK findDARKByDSpaceObject(Context context, DSpaceObject dso) throws SQLException;
+
+    List<UUID> findItemIdsWithoutDARK(Context context) throws SQLException;
+
+    long countItemsWithDARK(Context context) throws SQLException;
 
 }

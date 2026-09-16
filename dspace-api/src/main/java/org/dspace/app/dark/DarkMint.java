@@ -8,7 +8,6 @@
 package org.dspace.app.dark;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -75,11 +74,16 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         boolean singleItem = commandLine.hasOption("uuid");
         boolean allItems = commandLine.hasOption("all");
         boolean refreshStatus = commandLine.hasOption("refresh-status");
-        if ((singleItem ? 1 : 0) + (allItems ? 1 : 0) + (refreshStatus ? 1 : 0) != 1) {
+        boolean countLocal = commandLine.hasOption("count-local");
+        if ((singleItem ? 1 : 0) + (allItems ? 1 : 0) + (refreshStatus ? 1 : 0) + (countLocal ? 1 : 0) != 1) {
             throw new IllegalArgumentException(
-                "Specify exactly one of --uuid <Item UUID>, --all, or --refresh-status.");
+                "Specify exactly one of --uuid <Item UUID>, --all, --refresh-status, or --count-local.");
         }
 
+        if (countLocal) {
+            countItemsWithDARK();
+            return;
+        }
         if (allItems) {
             mintAll();
             return;
@@ -120,10 +124,12 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             batchSize = DEFAULT_BATCH_SIZE;
         }
 
-        List<UUID> itemIds = findAllItemIds();
+        List<UUID> itemIds = findItemIdsWithoutDARK();
+        int batchCount = numberOfBatches(itemIds.size(), batchSize);
         for (int start = 0; start < itemIds.size(); start += batchSize) {
             int end = Math.min(start + batchSize, itemIds.size());
-            MintSummary summary = mintBatch(itemIds.subList(start, end));
+            int batchNumber = (start / batchSize) + 1;
+            MintSummary summary = mintBatch(itemIds.subList(start, end), batchNumber, batchCount);
             minted += summary.minted;
             alreadyAssigned += summary.alreadyAssigned;
             missingMetadata += summary.missingMetadata;
@@ -138,18 +144,13 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
     }
 
     /**
-     * Materialize the Item identifiers before starting writes. Holding an Item iterator while updating Items can
-     * leave its Hibernate session closed during long-running CLI jobs.
+     * Materialize only Item UUIDs without a local dARK association before starting writes.
      */
-    private List<UUID> findAllItemIds() throws Exception {
+    private List<UUID> findItemIdsWithoutDARK() throws Exception {
         Context context = new Context();
         context.turnOffAuthorisationSystem();
         try {
-            List<UUID> itemIds = new ArrayList<>();
-            Iterator<Item> items = itemService.findAll(context);
-            while (items.hasNext()) {
-                itemIds.add(items.next().getID());
-            }
+            List<UUID> itemIds = darkIdentifierProvider.findItemIdsWithoutDARK(context);
             context.complete();
             return itemIds;
         } catch (Exception e) {
@@ -160,7 +161,22 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         }
     }
 
-    private MintSummary mintBatch(List<UUID> itemIds) {
+    private void countItemsWithDARK() throws Exception {
+        Context context = new Context();
+        context.turnOffAuthorisationSystem();
+        try {
+            long count = darkIdentifierProvider.countItemsWithDARK(context);
+            context.complete();
+            handler.logInfo("Items with a local dARK association: " + count + ".");
+        } catch (Exception e) {
+            context.abort();
+            throw e;
+        } finally {
+            context.restoreAuthSystemState();
+        }
+    }
+
+    private MintSummary mintBatch(List<UUID> itemIds, int batchNumber, int batchCount) {
         MintSummary summary = new MintSummary();
         List<Item> itemsToMint = new ArrayList<>();
         int registered = 0;
@@ -191,6 +207,8 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             }
 
             if (!itemsToMint.isEmpty()) {
+                handler.logInfo(String.format("Minting dARK batch %d/%d (%d ARKs).",
+                                              batchNumber, batchCount, itemsToMint.size()));
                 registered = registerBatch(context, itemsToMint);
             }
             context.complete();
@@ -268,8 +286,12 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         int published = 0;
         int pending = 0;
         int failed = 0;
+        int batchCount = numberOfBatches(pendingArks.size(), batchSize);
         for (int start = 0; start < pendingArks.size(); start += batchSize) {
             int end = Math.min(start + batchSize, pendingArks.size());
+            int batchNumber = (start / batchSize) + 1;
+            handler.logInfo(String.format("Refreshing dARK status batch %d/%d (%d ARKs).",
+                                          batchNumber, batchCount, end - start));
             StatusRefreshSummary summary = refreshStatusBatch(pendingArks.subList(start, end));
             checked += summary.checked;
             published += summary.published;
@@ -318,6 +340,10 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             context.restoreAuthSystemState();
         }
         return summary;
+    }
+
+    private int numberOfBatches(int size, int batchSize) {
+        return (size + batchSize - 1) / batchSize;
     }
 
     private static class StatusRefreshSummary {
