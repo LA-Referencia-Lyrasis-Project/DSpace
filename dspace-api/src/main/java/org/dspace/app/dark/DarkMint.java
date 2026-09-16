@@ -50,7 +50,7 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
 
     @Override
     public DarkMintScriptConfiguration getScriptConfiguration() {
-        return new DSpace().getServiceManager().getServiceByName("dark-mint", DarkMintScriptConfiguration.class);
+        return new DSpace().getServiceManager().getServiceByName("dark", DarkMintScriptConfiguration.class);
     }
 
     @Override
@@ -71,13 +71,13 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             throw new IllegalStateException("dARK is disabled. Set identifier.dark.enabled = true first.");
         }
 
-        boolean singleItem = commandLine.hasOption("uuid");
-        boolean allItems = commandLine.hasOption("all");
+        boolean singleItem = commandLine.hasOption("mint-uuid");
+        boolean allItems = commandLine.hasOption("mint-all");
         boolean refreshStatus = commandLine.hasOption("refresh-status");
         boolean countLocal = commandLine.hasOption("count-local");
         if ((singleItem ? 1 : 0) + (allItems ? 1 : 0) + (refreshStatus ? 1 : 0) + (countLocal ? 1 : 0) != 1) {
             throw new IllegalArgumentException(
-                "Specify exactly one of --uuid <Item UUID>, --all, --refresh-status, or --count-local.");
+                "Specify exactly one of --mint-uuid <Item UUID>, --mint-all, --refresh-status, or --count-local.");
         }
 
         if (countLocal) {
@@ -96,7 +96,7 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         Context context = new Context();
         context.turnOffAuthorisationSystem();
         try {
-            mintOne(context, UUID.fromString(commandLine.getOptionValue("uuid")));
+            mintOne(context, UUID.fromString(commandLine.getOptionValue("mint-uuid")));
             context.complete();
         } catch (Exception e) {
             context.abort();

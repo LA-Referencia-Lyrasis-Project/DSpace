@@ -8,7 +8,7 @@ internal Handle, and integrates the repository only through the dARK Minter
 HTTP API. No files in the dARK project are modified by this integration.
 
 dARK identifiers can be assigned automatically to new Items or, for existing
-Items, through the `dark-mint` administrative command.
+Items, through the `dark` administrative command.
 
 ## Components
 
@@ -21,7 +21,7 @@ The integration has five parts:
   and OAI-DC Level 2 metadata.
 4. `DarkService` and `DarkDAO` persist the local association between an Item
   and a dARK.
-5. `dark-mint` assigns dARKs to existing Items idempotently.
+5. `dark` assigns dARKs to existing Items idempotently.
 
 ## Configuration
 
@@ -137,23 +137,22 @@ performs preflight before reserving an ARK.
 
 ## Command-line assignment
 
-The script is registered as `dark-mint` and requires the provider to be enabled.
+The script is registered as `dark` and requires the provider to be enabled.
 Run it from the DSpace installation directory:
 
 ```bash
-bin/dspace dark-mint --uuid <uuid-do-item>
-bin/dspace dark-mint --all
-bin/dspace dark-mint --refresh-status
+bin/dspace dark --mint-uuid <uuid-do-item>
+bin/dspace dark --mint-all
+bin/dspace dark --refresh-status
+bin/dspace dark --count-local
 ```
 
-`--uuid` processes exactly one Item. `--all` queries only Items without a local
-dARK association, then attempts to mint one for each returned Item. `--count-local`
-reports the number of Items with a local dARK association without calling the
+- `--mint-uuid` processes exactly one Item. 
+- `--mint-all` queries only Items without a local dARK association, then attempts to mint one for each returned Item. 
+- `--count-local` reports the number of Items with a local dARK association without calling the
 dARK API or changing data.
-`--refresh-status` queries `GET /arks/{ark}` only
-for local dARKs in `DRAFT` (`D`) or `UPDATE` (`U`), then persists the returned
-state and CIDs. It does not reserve identifiers or submit metadata. The options
-are mutually exclusive.
+- `--refresh-status` queries `GET /arks/{ark}` only for local dARKs in `DRAFT` (`D`) or `UPDATE` (`U`), then persists the returned
+state and CIDs. It does not reserve identifiers or submit metadata. The options are mutually exclusive.
 
 For each Item, the command performs this sequence:
 
@@ -162,13 +161,13 @@ For each Item, the command performs this sequence:
 3. Validates the author and year in the configured fallback fields.
 4. If a requirement is missing, logs the Item as `skipped` and does not reserve
   an ARK.
-5. If preflight succeeds, `--uuid` delegates reservation and registration to
+5. If preflight succeeds, `--mint-uuid` delegates reservation and registration to
   `IdentifierService.register`.
-6. For `--all`, eligible Items are reserved in batches of
+6. For `--mint-all`, eligible Items are reserved in batches of
   `identifier.dark.batch-size`, then each Item is registered remotely and
   persisted individually.
 
-At the end of `--all`, the script reports counts for `minted`, `already assigned`,
+At the end of `--mint-all`, the script reports counts for `minted`, `already assigned`,
 `skipped for missing metadata`, and `failed`. A failure for one Item does not
 stop the traversal; at the end, the command exits with an error if any failure
 occurred.
@@ -210,8 +209,8 @@ standard DSpace update process before enabling the provider in a new database.
 2. Run the DSpace database update to apply the `dark` migration.
 3. Build and install the DSpace artifact normally.
 4. Restart the DSpace server.
-5. Test one Item first using `bin/dspace dark-mint --uuid ...`.
-6. Only then run `bin/dspace dark-mint --all` for legacy content.
+5. Test one Item first using `bin/dspace dark --mint-uuid ...`.
+6. Only then run `bin/dspace dark --mint-all` for legacy content.
 
 For a focused build during development:
 
@@ -229,7 +228,7 @@ available locally.
 
 - Keep `identifier.dark.enabled = false` until the authority, NAAN, and API are
   ready.
-- Test with `--uuid` before bulk processing.
+- Test with `--mint-uuid` before bulk processing.
 - Fix metadata for skipped Items and run the same command again; the flow is
   idempotent for Items that already have a dARK.
 - Do not modify the dARK repository or API to adapt DSpace formats; format

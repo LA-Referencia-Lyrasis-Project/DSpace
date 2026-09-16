@@ -39,9 +39,9 @@ part of the versioned source code.
 
 | File | Action | Change |
 | --- | --- | --- |
-| `dspace-api/src/main/java/org/dspace/app/dark/DarkMint.java` | Added | Implements `dark-mint --uuid`, `dark-mint --all`, and `dark-mint --refresh-status`; the refresh mode queries only pending `D`/`U` ARKs and persists the latest Minter state and CIDs. |
-| `dspace-api/src/main/java/org/dspace/app/dark/DarkMintScriptConfiguration.java` | Added | Declares the script's `--uuid`, `--all`, `--refresh-status`, and `--help` options. |
-| `dspace/config/spring/api/scripts.xml` | Modified | Registers the `dark-mint` command with the `bin/dspace` launcher. |
+| `dspace-api/src/main/java/org/dspace/app/dark/DarkMint.java` | Added | Implements `dark --mint-uuid`, `dark --mint-all`, `dark --refresh-status`, and `dark --count-local`; refresh queries pending `D`/`U` ARKs and persists the latest Minter state and CIDs. |
+| `dspace-api/src/main/java/org/dspace/app/dark/DarkMintScriptConfiguration.java` | Added | Declares the script's `--mint-uuid`, `--mint-all`, `--refresh-status`, `--count-local`, and `--help` options. |
+| `dspace/config/spring/api/scripts.xml` | Modified | Registers the `dark` command with the `bin/dspace` launcher. |
 
 ## Configuration and metadata
 

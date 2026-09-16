@@ -87,8 +87,8 @@
         <property name="dspaceRunnableClass" value="org.dspace.app.solrdatabaseresync.SolrDatabaseResyncCli"/>
     </bean>
 
-    <bean id="dark-mint" class="org.dspace.app.dark.DarkMintScriptConfiguration">
-        <property name="description" value="Mint dARK identifiers or refresh pending dARK publication states"/>
+    <bean id="dark" class="org.dspace.app.dark.DarkMintScriptConfiguration">
+        <property name="description" value="Manage local dARK identifiers and publication states"/>
         <property name="dspaceRunnableClass" value="org.dspace.app.dark.DarkMint"/>
     </bean>
 
