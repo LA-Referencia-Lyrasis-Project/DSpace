@@ -79,13 +79,16 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             throw new IllegalArgumentException("Specify exactly one of --uuid <Item UUID>, --all, or --refresh-status.");
         }
 
+        if (allItems) {
+            mintAll();
+            return;
+        }
+
         Context context = new Context();
         context.turnOffAuthorisationSystem();
         try {
             if (singleItem) {
                 mintOne(context, UUID.fromString(commandLine.getOptionValue("uuid")));
-            } else if (allItems) {
-                mintAll(context);
             } else {
                 refreshPendingStatuses(context);
             }
@@ -106,7 +109,7 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         mintIfMissing(context, item);
     }
 
-    private void mintAll(Context context) throws Exception {
+    private void mintAll() throws Exception {
         int minted = 0;
         int alreadyAssigned = 0;
         int missingMetadata = 0;
@@ -115,43 +118,15 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         if (batchSize < 1) {
             batchSize = DEFAULT_BATCH_SIZE;
         }
-        List<Item> batch = new ArrayList<>();
-        Iterator<Item> items = itemService.findAll(context);
-        while (items.hasNext()) {
-            Item item = items.next();
-            try {
-                MintResult result = checkMintable(context, item);
-                if (MintResult.ALREADY_ASSIGNED.equals(result)) {
-                    alreadyAssigned++;
-                } else if (MintResult.MISSING_METADATA.equals(result)) {
-                    missingMetadata++;
-                } else {
-                    batch.add(item);
-                    if (batch.size() >= batchSize) {
-                        try {
-                            minted += mintBatch(context, batch);
-                        } catch (Exception e) {
-                            failed += batch.size();
-                            log.error("Unable to mint dARK batch.", e);
-                        } finally {
-                            batch.clear();
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                failed++;
-                log.error("Unable to mint dARK for Item {}.", item.getID(), e);
-            }
-        }
-        if (!batch.isEmpty()) {
-            try {
-                minted += mintBatch(context, batch);
-            } catch (Exception e) {
-                failed += batch.size();
-                log.error("Unable to mint dARK batch.", e);
-            } finally {
-                batch.clear();
-            }
+
+        List<UUID> itemIds = findAllItemIds();
+        for (int start = 0; start < itemIds.size(); start += batchSize) {
+            int end = Math.min(start + batchSize, itemIds.size());
+            MintSummary summary = mintBatch(itemIds.subList(start, end));
+            minted += summary.minted;
+            alreadyAssigned += summary.alreadyAssigned;
+            missingMetadata += summary.missingMetadata;
+            failed += summary.failed;
         }
         handler.logInfo(String.format("dARK mint completed: %d minted, %d already assigned, " +
                                       "%d skipped for missing metadata, %d failed.",
@@ -159,6 +134,96 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         if (failed > 0) {
             throw new IllegalStateException("dARK mint completed with " + failed + " failures.");
         }
+    }
+
+    /**
+     * Materialize the Item identifiers before starting writes. Holding an Item iterator while updating Items can
+     * leave its Hibernate session closed during long-running CLI jobs.
+     */
+    private List<UUID> findAllItemIds() throws Exception {
+        Context context = new Context();
+        context.turnOffAuthorisationSystem();
+        try {
+            List<UUID> itemIds = new ArrayList<>();
+            Iterator<Item> items = itemService.findAll(context);
+            while (items.hasNext()) {
+                itemIds.add(items.next().getID());
+            }
+            context.complete();
+            return itemIds;
+        } catch (Exception e) {
+            context.abort();
+            throw e;
+        } finally {
+            context.restoreAuthSystemState();
+        }
+    }
+
+    private MintSummary mintBatch(List<UUID> itemIds) {
+        MintSummary summary = new MintSummary();
+        List<Item> itemsToMint = new ArrayList<>();
+        int registered = 0;
+        Context context = new Context();
+        context.turnOffAuthorisationSystem();
+        try {
+            for (UUID itemId : itemIds) {
+                Item item = itemService.find(context, itemId);
+                if (item == null) {
+                    summary.failed++;
+                    log.warn("Item {} no longer exists and was skipped during dARK minting.", itemId);
+                    continue;
+                }
+
+                try {
+                    MintResult result = checkMintable(context, item);
+                    if (MintResult.ALREADY_ASSIGNED.equals(result)) {
+                        summary.alreadyAssigned++;
+                    } else if (MintResult.MISSING_METADATA.equals(result)) {
+                        summary.missingMetadata++;
+                    } else {
+                        itemsToMint.add(item);
+                    }
+                } catch (Exception e) {
+                    summary.failed++;
+                    log.error("Unable to mint dARK for Item {}.", item.getID(), e);
+                }
+            }
+
+            if (!itemsToMint.isEmpty()) {
+                registered = registerBatch(context, itemsToMint);
+            }
+            context.complete();
+            summary.minted += registered;
+            for (Item item : itemsToMint) {
+                handler.logInfo("Minted dARK for Item " + item.getID() + ".");
+            }
+        } catch (Exception e) {
+            summary.failed += itemsToMint.size();
+            log.error("Unable to process dARK batch.", e);
+            context.abort();
+        } finally {
+            context.restoreAuthSystemState();
+        }
+        return summary;
+    }
+
+    private static class MintSummary {
+        private int minted;
+        private int alreadyAssigned;
+        private int missingMetadata;
+        private int failed;
+    }
+
+    private int registerBatch(Context context, List<Item> batch) throws Exception {
+        Map<UUID, String> arks = darkIdentifierProvider.reserveBatch(context, batch);
+        for (Item item : batch) {
+            String ark = arks.get(item.getID());
+            if (StringUtils.isBlank(ark)) {
+                throw new IllegalStateException("dARK batch reservation returned no ARK for Item " + item.getID());
+            }
+            identifierService.register(context, item, ark);
+        }
+        return batch.size();
     }
 
     private MintResult mintIfMissing(Context context, Item item) throws Exception {
@@ -188,19 +253,6 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         }
 
         return MintResult.MINTED;
-    }
-
-    private int mintBatch(Context context, List<Item> batch) throws Exception {
-        Map<UUID, String> arks = darkIdentifierProvider.reserveBatch(context, batch);
-        for (Item item : batch) {
-            String ark = arks.get(item.getID());
-            if (StringUtils.isBlank(ark)) {
-                throw new IllegalStateException("dARK batch reservation returned no ARK for Item " + item.getID());
-            }
-            identifierService.register(context, item, ark);
-            handler.logInfo("Minted dARK for Item " + item.getID() + ".");
-        }
-        return batch.size();
     }
 
     private void refreshPendingStatuses(Context context) throws Exception {
