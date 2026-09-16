@@ -101,19 +101,23 @@ sequenceDiagram
     participant DB as DSpace Database
 
     D->>P: register(Item)
-    P->>P: find existing dARK
-    alt Item has no dARK
-        P->>M: POST /arks/batch
-      M-->>P: reserved ARK
-      P->>DB: save local association
+    P->>P: find local dARK
+    alt Item has no local dARK
+        P->>M: POST /arks
+        M-->>P: reserved ARK (R)
+        P->>DB: save local dARK association
     end
-    P->>P: build Level 1 and OAI-DC Level 2
-    P->>M: PUT /arks/{ark}
-    M-->>P: accepted state (D or U) and CIDs
-    P->>DB: update local association and Item metadata
-    P->>M: GET /arks/{ark}
-    M-->>P: current state and CIDs
-    P->>DB: refresh local state and CIDs
+    alt local state is D or U
+        P->>DB: ensure dc.identifier.dark metadata
+    else local state requires metadata submission
+        P->>P: build Level 1 and OAI-DC Level 2
+        P->>M: PUT /arks/{ark}
+        M-->>P: accepted state and CIDs
+        P->>DB: update local association and dc.identifier.dark
+        P->>M: GET /arks/{ark}
+        M-->>P: current state and CIDs
+        P->>DB: refresh local state and CIDs
+    end
     P-->>D: ark:NAAN/nome
 ```
 
@@ -147,30 +151,107 @@ bin/dspace dark --refresh-status
 bin/dspace dark --count-local
 ```
 
-- `--mint-uuid` processes exactly one Item. 
-- `--mint-all` queries only Items without a local dARK association, then attempts to mint one for each returned Item. 
-- `--count-local` reports the number of Items with a local dARK association without calling the
-dARK API or changing data.
-- `--refresh-status` queries `GET /arks/{ark}` only for local dARKs in `DRAFT` (`D`) or `UPDATE` (`U`), then persists the returned
-state and CIDs. It does not reserve identifiers or submit metadata. The options are mutually exclusive.
+The options are mutually exclusive.
 
-For each Item, the command performs this sequence:
+### `--mint-uuid`
 
-1. Checks whether an association already exists in the `dark` table.
-2. If one exists, logs `already has dARK` and does not call the Minter.
-3. Validates the author and year in the configured fallback fields.
-4. If a requirement is missing, logs the Item as `skipped` and does not reserve
-  an ARK.
-5. If preflight succeeds, `--mint-uuid` delegates reservation and registration to
-  `IdentifierService.register`.
-6. For `--mint-all`, eligible Items are reserved in batches of
-  `identifier.dark.batch-size`, then each Item is registered remotely and
-  persisted individually.
+Processes one Item. It checks for an existing local dARK and validates required
+metadata before reserving an ARK.
+
+```mermaid
+sequenceDiagram
+    participant C as dark CLI
+    participant D as DSpace/IdentifierService
+    participant P as DarkIdentifierProvider
+    participant M as dARK Minter
+    participant DB as DSpace Database
+
+    C->>DB: load Item by UUID
+    C->>P: check existing dARK and preflight metadata
+    alt Item is eligible
+        C->>D: register(Item, DARK)
+        D->>P: register(Item)
+        P->>M: POST /arks
+        M-->>P: reserved ARK (R)
+        P->>DB: save local association
+        P->>M: PUT /arks/{ark}
+        M-->>P: accepted state and CIDs
+        P->>DB: update association and dc.identifier.dark
+        P->>M: GET /arks/{ark}
+        M-->>P: current state and CIDs
+        P->>DB: refresh local state and CIDs
+    else Item already has dARK or fails preflight
+        C->>C: log result without reserving an ARK
+    end
+```
+
+### `--mint-all`
+
+Queries only Items without a local dARK association. Eligible Items are
+preflighted and reserved in batches of `identifier.dark.batch-size`; each
+reserved Item is then registered individually.
+
+```mermaid
+sequenceDiagram
+    participant C as dark CLI
+    participant D as DSpace/IdentifierService
+    participant P as DarkIdentifierProvider
+    participant M as dARK Minter
+    participant DB as DSpace Database
+
+    C->>P: find Item UUIDs without local dARK
+    P->>DB: query Items with no dark association
+    DB-->>P: candidate Item UUIDs
+    P-->>C: candidate Item UUIDs
+    loop each CLI batch
+        C->>C: load Items and preflight metadata
+        C->>P: reserveBatch(eligible Items)
+        P->>M: POST /arks/batch
+        M-->>P: reserved ARKs (R)
+        P->>DB: save local associations
+        loop each reserved Item
+            C->>D: register(Item, reserved ARK)
+            D->>P: submit metadata
+            P->>M: PUT /arks/{ark}
+            M-->>P: accepted state and CIDs
+            P->>DB: update association and dc.identifier.dark
+            P->>M: GET /arks/{ark}
+            M-->>P: current state and CIDs
+            P->>DB: refresh local state and CIDs
+        end
+        C->>DB: commit batch
+    end
+```
 
 At the end of `--mint-all`, the script reports counts for `minted`, `already assigned`,
 `skipped for missing metadata`, and `failed`. A failure for one Item does not
 stop the traversal; at the end, the command exits with an error if any failure
 occurred.
+
+### `--refresh-status`
+
+Reads pending local dARKs in `DRAFT` (`D`) or `UPDATE` (`U`) and refreshes their
+state from the Minter. It neither reserves identifiers nor submits metadata.
+
+```mermaid
+sequenceDiagram
+    participant C as dark CLI
+    participant P as DarkIdentifierProvider
+    participant M as dARK Minter
+    participant DB as DSpace Database
+
+    C->>P: find pending ARKs (D or U)
+    P->>DB: read local pending associations
+    DB-->>P: pending ARKs
+    P-->>C: pending ARKs
+    loop each CLI batch and ARK
+        C->>P: refresh pending status
+        P->>M: GET /arks/{ark}
+        M-->>P: current state and CIDs
+        P->>DB: update local state and CIDs
+    end
+    C->>DB: commit batch
+```
 
 `--refresh-status` uses `identifier.dark.batch-size` to commit local updates
 per batch. The dARK API currently exposes status only per ARK, so each batch
@@ -178,6 +259,23 @@ still performs one `GET /arks/{ark}` request for each pending ARK. It reports
 the number of dARKs checked, published, still pending, and failed. It can be
 run repeatedly by an administrator or a cron job until pending records reach
 `PUBLISHED`.
+
+### `--count-local`
+
+Counts Item associations in the local `dark` table. It does not call the dARK
+Minter API and does not modify data.
+
+```mermaid
+sequenceDiagram
+    participant C as dark CLI
+    participant P as DarkIdentifierProvider
+    participant DB as DSpace Database
+
+    C->>P: count Items with local dARK
+    P->>DB: COUNT Items with dark association
+    DB-->>P: count
+    P-->>C: log local count
+```
 
 Example preflight result for an Item without an author:
 
