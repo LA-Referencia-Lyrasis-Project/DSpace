@@ -24,6 +24,7 @@ public class DarkMintScriptConfiguration extends ScriptConfiguration<DarkMint> {
             options.addOption("u", "mint-uuid", true, "mint a dARK for one Item UUID");
             options.addOption("a", "mint-all", false, "mint dARKs for all archived Items without one");
             options.addOption("r", "refresh-status", false, "refresh pending dARK publication states");
+            options.addOption("f", "refresh-uuid", true, "refresh dARK publication state for one Item UUID");
             options.addOption("c", "count-local", false, "count Items with a local dARK association");
             options.addOption("h", "help", false, "help");
         }

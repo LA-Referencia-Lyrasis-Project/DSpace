@@ -152,6 +152,7 @@ Run it from the DSpace installation directory:
 bin/dspace dark --mint-uuid <uuid-do-item>
 bin/dspace dark --mint-all
 bin/dspace dark --refresh-status
+bin/dspace dark --refresh-uuid <uuid-do-item>
 bin/dspace dark --count-local
 ```
 
@@ -275,6 +276,12 @@ the number of dARKs checked, published, still pending, and failed. It can be
 run repeatedly by an administrator or a cron job until pending records reach
 `PUBLISHED`.
 
+### `--refresh-uuid`
+
+Refreshes the Minter state for one Item's existing local dARK association. It
+is used by the administrative UI for Item rows in `D` or `U` state and does not
+reserve an ARK or submit metadata.
+
 ### `--count-local`
 
 Counts Item associations in the local `dark` table. It does not call the dARK
@@ -311,11 +318,29 @@ Indexes support lookups by ARK and DSpace object.
 
 The `dark.status` column stores the dARK Minter state code directly: `R`
 (reserved), `D` (draft), `U` (update), `P` (published), or `T` (tombstone).
-The local `tombstone_requested` flag is separate from those remote states and is
-set only after removal from the Item, until the Minter confirms `T`.
-
 Migrations are provided for PostgreSQL and H2. They must be applied through the
 standard DSpace update process before enabling the provider in a new database.
+
+The table does not contain `resource_type_id` or `tombstone_requested`. dARK
+records are Item associations, and DSpace does not request tombstoning from the
+dARK platform.
+
+## Administrative web UI
+
+Site administrators can open `/admin/darks` to inspect the local dARK registry.
+The UI uses the protected `GET /api/admin/darks` endpoint and supports filters
+by ARK, status, Item UUID, and saved Minter error; creation/update date sorting;
+pagination; and CSV export through `GET /api/admin/darks/export`.
+
+The "Items without dARK" view lists only Items with no local association. Its
+bulk action starts the existing `dark --mint-all` script as a DSpace process.
+Row actions also start DSpace processes: `--mint-uuid` retries records with a
+saved Minter error, and `--refresh-uuid` refreshes an individual `D` or `U`
+record. Published (`P`) records have no UI action.
+
+The web API intentionally exposes only the fields needed for administration:
+ARK, Item UUID, state, target, last error, and timestamps. Internal client IDs
+and CIDs remain stored locally but are not returned by this endpoint.
 
 ## Deployment and verification
 

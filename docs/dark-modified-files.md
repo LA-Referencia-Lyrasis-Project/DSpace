@@ -9,12 +9,12 @@ part of the versioned source code.
 
 | File | Action | Change |
 | --- | --- | --- |
-| `dspace-api/src/main/java/org/dspace/identifier/DARK.java` | Added | Hibernate entity representing the local association between a dARK and a DSpace object. Stores the ARK, Item, dARK Minter state code (`R/D/U/P/T`), local tombstone-request flag, target, CIDs, last Minter error, and local creation/update timestamps. |
+| `dspace-api/src/main/java/org/dspace/identifier/DARK.java` | Added | Hibernate entity representing the local association between a dARK and an Item. Stores the ARK, dARK Minter state code (`R/D/U/P/T`), client Item ID, target, CIDs, last Minter error, and local creation/update timestamps. |
 | `dspace-api/src/main/java/org/dspace/identifier/service/DarkService.java` | Added | Service contract for creating, locating, and updating dARK identifiers. |
 | `dspace-api/src/main/java/org/dspace/identifier/DarkServiceImpl.java` | Added | Service implementation; normalizes legacy `ark:/...` values into the compact DSpace canonical form `ark:...`. |
 | `dspace-api/src/main/java/org/dspace/identifier/dao/DarkDAO.java` | Added | DAO contract for lookups by ARK and DSpace object. |
 | `dspace-api/src/main/java/org/dspace/identifier/dao/impl/DarkDAOImpl.java` | Added | Hibernate implementation of the dARK DAO. |
-| `dspace-api/src/main/resources/org/dspace/storage/rdbms/sqlmigration/postgres/V11.0_2026.09.03__dark_identifier.sql` | Added and modified | Creates the sequence, `dark` table, unique constraints, indexes, direct Minter state-code column, local tombstone-request flag, `last_error`, and timestamps for PostgreSQL. |
+| `dspace-api/src/main/resources/org/dspace/storage/rdbms/sqlmigration/postgres/V11.0_2026.09.03__dark_identifier.sql` | Added and modified | Creates the sequence, `dark` table, unique constraints, indexes, Minter state code, `last_error`, and timestamps for PostgreSQL. |
 | `dspace-api/src/main/resources/org/dspace/storage/rdbms/sqlmigration/h2/V11.0_2026.09.03__dark_identifier.sql` | Added and modified | H2 equivalent of the migration, including `last_error` and timestamps, used for tests and development. |
 | `dspace/config/hibernate.cfg.xml` | Modified | Registers the `org.dspace.identifier.DARK` Hibernate entity. |
 | `dspace/config/spring/api/core-dao-services.xml` | Modified | Registers `DarkDAOImpl` as a Spring-managed DAO. |
@@ -24,7 +24,7 @@ part of the versioned source code.
 
 | File | Action | Change |
 | --- | --- | --- |
-| `dspace-api/src/main/java/org/dspace/identifier/DarkIdentifierProvider.java` | Added and modified | `IdentifierService` provider that reserves, registers, looks up, updates, and removes dARKs; persists `dc.identifier.dark` without changing Handle, `dc.identifier`, or `dc.identifier.uri`; performs a non-blocking `GET /arks/{ark}` after metadata submission; and records Minter metadata-rejection messages for retry. |
+| `dspace-api/src/main/java/org/dspace/identifier/DarkIdentifierProvider.java` | Added and modified | `IdentifierService` provider that reserves, registers, looks up, updates, and removes local dARK associations without requesting remote tombstones; persists `dc.identifier.dark` without changing Handle, `dc.identifier`, or `dc.identifier.uri`; performs a non-blocking `GET /arks/{ark}` after metadata submission; and records Minter metadata-rejection messages for retry. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkClient.java` | Added | HTTP client interface to reserve, look up, update metadata for, and tombstone ARKs. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkClientImpl.java` | Added | Apache HTTP client for the Minter API; reserves ARKs in batches, retrieves current ARK state, updates metadata, applies optional authentication and authority header, and converts legacy `ark:/...` input to `ark:...` for Minter URLs. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkArkResponse.java` | Added | DTO for an ARK response returned by the API. |
@@ -39,8 +39,8 @@ part of the versioned source code.
 
 | File | Action | Change |
 | --- | --- | --- |
-| `dspace-api/src/main/java/org/dspace/app/dark/DarkMint.java` | Added | Implements `dark --mint-uuid`, `dark --mint-all`, `dark --refresh-status`, and `dark --count-local`; refresh queries pending `D`/`U` ARKs and persists the latest Minter state and CIDs. |
-| `dspace-api/src/main/java/org/dspace/app/dark/DarkMintScriptConfiguration.java` | Added | Declares the script's `--mint-uuid`, `--mint-all`, `--refresh-status`, `--count-local`, and `--help` options. |
+| `dspace-api/src/main/java/org/dspace/app/dark/DarkMint.java` | Added | Implements `dark --mint-uuid`, `dark --mint-all`, `dark --refresh-status`, `dark --refresh-uuid`, and `dark --count-local`; refresh queries pending `D`/`U` ARKs and persists the latest Minter state and CIDs. |
+| `dspace-api/src/main/java/org/dspace/app/dark/DarkMintScriptConfiguration.java` | Added | Declares the script's mint, global/single status refresh, local count, and help options. |
 | `dspace/config/spring/api/scripts.xml` | Modified | Registers the `dark` command with the `bin/dspace` launcher. |
 
 ## Configuration and metadata
@@ -66,6 +66,7 @@ part of the versioned source code.
 | --- | --- | --- |
 | `docs/dark-dspace-integration.md` | Added | Guide to architecture, configuration, automatic flow, CLI, persistence, deployment, and safe operation. |
 | `docs/dark-modified-files.md` | Added | This complete file inventory. |
+| `dspace-server-webapp/src/main/java/org/dspace/app/rest/DarkAdminRestController.java` | Added | Site-administrator REST endpoint for paginated local dARK data and CSV export. It excludes internal client IDs and CIDs from its response. |
 
 ## Non-functional artifact
 

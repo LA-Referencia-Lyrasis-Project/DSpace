@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
 import org.dspace.core.Context;
 import org.dspace.core.GenericDAO;
 import org.dspace.identifier.DARK;
@@ -28,5 +29,14 @@ public interface DarkDAO extends GenericDAO<DARK> {
     List<UUID> findItemIdsWithoutDARK(Context context) throws SQLException;
 
     long countItemsWithDARK(Context context) throws SQLException;
+
+    List<DARK> findAll(Context context, String ark, String status, UUID itemId, boolean errorsOnly,
+                       int limit, int offset, String sort, boolean ascending) throws SQLException;
+
+    long count(Context context, String ark, String status, UUID itemId, boolean errorsOnly) throws SQLException;
+
+    List<Item> findItemsWithoutDARK(Context context, UUID itemId, int limit, int offset) throws SQLException;
+
+    long countItemsWithoutDARK(Context context, UUID itemId) throws SQLException;
 
 }

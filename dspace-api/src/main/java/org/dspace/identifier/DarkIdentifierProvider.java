@@ -397,7 +397,6 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
             removeDARKFromObject(context, dso, ark);
             if (dark != null) {
                 dark.setDSpaceObject(null);
-                dark.setTombstoneRequested(true);
                 darkService.update(context, dark);
             }
         } catch (SQLException e) {
@@ -420,22 +419,6 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
                                               DarkIdentifierException.MISMATCH);
         }
         register(context, dso, ark);
-    }
-
-    public void tombstoneOnline(Context context, String identifier) throws IdentifierException, SQLException {
-        String ark = darkService.formatIdentifier(identifier);
-        DARK dark = darkService.findByArk(context, ark);
-        if (dark == null) {
-            throw new DarkIdentifierException("Unable to find dARK.", DarkIdentifierException.DARK_DOES_NOT_EXIST);
-        }
-        if (!dark.isTombstoneRequested()) {
-            throw new IllegalArgumentException("Delete the dARK locally before tombstoning it online: " + ark);
-        }
-
-        darkClient.tombstoneARK(ark, getAuthorityId());
-        dark.setStatus(TOMBSTONED);
-        dark.setTombstoneRequested(false);
-        darkService.update(context, dark);
     }
 
     protected DARK loadOrCreateDARK(Context context, DSpaceObject dso, String arkIdentifier, Filter filter)
@@ -739,6 +722,6 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
     }
 
     private boolean isTombstoned(DARK dark) {
-        return TOMBSTONED.equals(dark.getStatus()) || dark.isTombstoneRequested();
+        return TOMBSTONED.equals(dark.getStatus());
     }
 }

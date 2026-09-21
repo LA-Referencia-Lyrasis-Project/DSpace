@@ -47,16 +47,9 @@ public class DARK implements Identifier, ReloadableEntity<Integer> {
     @JoinColumn(name = "dspace_object")
     private DSpaceObject dSpaceObject;
 
-    @Column(name = "resource_type_id")
-    private Integer resourceTypeId;
-
     /** Current state reported by the dARK Minter: R, D, U, P, or T. */
     @Column(name = "status", length = 1)
     private String status;
-
-    /** True after local removal and before the Minter confirms tombstoning. */
-    @Column(name = "tombstone_requested", nullable = false)
-    private boolean tombstoneRequested;
 
     @Column(name = "client_item_id", length = 128)
     private String clientItemId;
@@ -109,13 +102,6 @@ public class DARK implements Identifier, ReloadableEntity<Integer> {
 
     public void setDSpaceObject(DSpaceObject dSpaceObject) {
         this.dSpaceObject = dSpaceObject;
-        if (dSpaceObject != null) {
-            this.resourceTypeId = dSpaceObject.getType();
-        }
-    }
-
-    public Integer getResourceTypeId() {
-        return resourceTypeId;
     }
 
     public String getStatus() {
@@ -124,14 +110,6 @@ public class DARK implements Identifier, ReloadableEntity<Integer> {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public boolean isTombstoneRequested() {
-        return tombstoneRequested;
-    }
-
-    public void setTombstoneRequested(boolean tombstoneRequested) {
-        this.tombstoneRequested = tombstoneRequested;
     }
 
     public String getClientItemId() {

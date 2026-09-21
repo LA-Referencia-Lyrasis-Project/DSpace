@@ -74,10 +74,12 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         boolean singleItem = commandLine.hasOption("mint-uuid");
         boolean allItems = commandLine.hasOption("mint-all");
         boolean refreshStatus = commandLine.hasOption("refresh-status");
+        boolean refreshUuid = commandLine.hasOption("refresh-uuid");
         boolean countLocal = commandLine.hasOption("count-local");
-        if ((singleItem ? 1 : 0) + (allItems ? 1 : 0) + (refreshStatus ? 1 : 0) + (countLocal ? 1 : 0) != 1) {
+        if ((singleItem ? 1 : 0) + (allItems ? 1 : 0) + (refreshStatus ? 1 : 0) + (refreshUuid ? 1 : 0) +
+            (countLocal ? 1 : 0) != 1) {
             throw new IllegalArgumentException(
-                "Specify exactly one of --mint-uuid <Item UUID>, --mint-all, --refresh-status, or --count-local.");
+                "Specify exactly one dARK operation.");
         }
 
         if (countLocal) {
@@ -90,6 +92,10 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         }
         if (refreshStatus) {
             refreshPendingStatuses();
+            return;
+        }
+        if (refreshUuid) {
+            refreshOneStatus(UUID.fromString(commandLine.getOptionValue("refresh-uuid")));
             return;
         }
 
@@ -305,6 +311,34 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
                                       checked, published, pending, failed));
         if (failed > 0) {
             throw new IllegalStateException("dARK status refresh completed with " + failed + " failures.");
+        }
+    }
+
+    private void refreshOneStatus(UUID itemId) throws Exception {
+        Context context = new Context();
+        context.turnOffAuthorisationSystem();
+        try {
+            Item item = itemService.find(context, itemId);
+            if (item == null) {
+                throw new IllegalArgumentException("Item not found: " + itemId);
+            }
+            DARK dark = darkIdentifierProvider.findDARKByObject(context, item);
+            if (dark == null || StringUtils.isBlank(dark.getArk())) {
+                throw new IllegalArgumentException("Item has no local dARK association: " + itemId);
+            }
+            DarkIdentifierProvider.StatusRefreshResult result = darkIdentifierProvider.refreshPendingStatuses(
+                context, List.of(dark.getArk()));
+            handler.logInfo(String.format("dARK status refresh completed: %d checked, %d published, %d pending, %d failed.",
+                result.getChecked(), result.getPublished(), result.getPending(), result.getFailed()));
+            if (result.getFailed() > 0) {
+                throw new IllegalStateException("dARK status refresh failed for Item " + itemId + ".");
+            }
+            context.complete();
+        } catch (Exception e) {
+            context.abort();
+            throw e;
+        } finally {
+            context.restoreAuthSystemState();
         }
     }
 

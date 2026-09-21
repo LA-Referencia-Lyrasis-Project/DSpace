@@ -79,6 +79,28 @@ public class DarkServiceImpl implements DarkService {
     }
 
     @Override
+    public List<DARK> findAll(Context context, String ark, String status, UUID itemId, boolean errorsOnly,
+                              int limit, int offset, String sort, boolean ascending) throws SQLException {
+        return darkDAO.findAll(context, ark, status, itemId, errorsOnly, limit, offset, sort, ascending);
+    }
+
+    @Override
+    public long count(Context context, String ark, String status, UUID itemId, boolean errorsOnly) throws SQLException {
+        return darkDAO.count(context, ark, status, itemId, errorsOnly);
+    }
+
+    @Override
+    public List<org.dspace.content.Item> findItemsWithoutDARK(Context context, UUID itemId, int limit, int offset)
+        throws SQLException {
+        return darkDAO.findItemsWithoutDARK(context, itemId, limit, offset);
+    }
+
+    @Override
+    public long countItemsWithoutDARK(Context context, UUID itemId) throws SQLException {
+        return darkDAO.countItemsWithoutDARK(context, itemId);
+    }
+
+    @Override
     public String formatIdentifier(String identifier) throws DarkIdentifierException {
         if (identifier == null) {
             throw new IllegalArgumentException("Identifier is null.", new NullPointerException());
