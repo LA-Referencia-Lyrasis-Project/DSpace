@@ -59,6 +59,8 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
     public static final String PUBLISHED = "P";
     public static final String TOMBSTONED = "T";
 
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 4096;
+
     /** Summary of a refresh of dARKs pending asynchronous Minter processing. */
     public static final class StatusRefreshResult {
 
@@ -160,8 +162,9 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         }
 
         String ark = darkService.formatIdentifier(identifier);
+        DARK dark = null;
         try {
-            DARK dark = loadOrCreateDARK(context, dso, ark, filter);
+            dark = loadOrCreateDARK(context, dso, ark, filter);
             if (isTombstoned(dark)) {
                 throw new DarkIdentifierException("You tried to register a dARK that is marked as tombstoned.",
                                                   DarkIdentifierException.DARK_IS_TOMBSTONED);
@@ -173,8 +176,15 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
             }
 
             DarkMetadataRequest request = metadataBuilder.build(context, (Item) dso, getAuthorityId(), ark);
-            DarkArkResponse response = darkClient.updateMetadata(ark, request);
+            DarkArkResponse response;
+            try {
+                response = darkClient.updateMetadata(ark, request);
+            } catch (DarkIdentifierException e) {
+                saveMinterError(context, dark, dso, e);
+                return;
+            }
             applyResponse(dark, response);
+            dark.setLastError(null);
             darkService.update(context, dark);
             saveDARKToObject(context, dso, ark);
             refreshStatus(context, dark, ark);
@@ -450,7 +460,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
     }
 
     public String getDARKByObject(Context context, DSpaceObject dso) throws SQLException {
-        DARK dark = darkService.findDARKByDSpaceObject(context, dso);
+        DARK dark = findDARKByObject(context, dso);
         if (dark == null || isTombstoned(dark)) {
             return null;
         }
@@ -458,6 +468,18 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
             throw new IllegalStateException("A dARK with an empty ark column was found for DSO " + dso.getID() + ".");
         }
         return dark.getArk();
+    }
+
+    /**
+     * Finds the local dARK association for a DSpace object, including a dARK with a saved Minter error.
+     *
+     * @param context DSpace context
+     * @param dso DSpace object
+     * @return local dARK association, or {@code null} when none exists
+     * @throws SQLException if the local dARK association cannot be read
+     */
+    public DARK findDARKByObject(Context context, DSpaceObject dso) throws SQLException {
+        return darkService.findDARKByDSpaceObject(context, dso);
     }
 
     /**
@@ -480,16 +502,6 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
      */
     public long countItemsWithDARK(Context context) throws SQLException {
         return darkService.countItemsWithDARK(context);
-    }
-
-    /**
-     * Returns the configured Level 1 metadata fields required before registering an Item with dARK.
-     *
-     * @param item Item to validate
-     * @return required metadata fields without a usable value
-     */
-    public List<String> missingRequiredMetadata(Item item) {
-        return metadataBuilder.missingRequiredMetadata(item);
     }
 
     /**
@@ -690,6 +702,15 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         if (StringUtils.isNotBlank(response.getClientItemId())) {
             dark.setClientItemId(response.getClientItemId());
         }
+    }
+
+    private void saveMinterError(Context context, DARK dark, DSpaceObject dso, DarkIdentifierException exception)
+        throws SQLException {
+        String message = StringUtils.abbreviate(StringUtils.defaultIfBlank(exception.getMessage(), "Unknown dARK Minter error."),
+                                                MAX_ERROR_MESSAGE_LENGTH);
+        dark.setLastError(message);
+        darkService.update(context, dark);
+        log.error("dARK Minter rejected metadata for Item {} and ARK {}: {}", dso.getID(), dark.getArk(), message);
     }
 
     /**

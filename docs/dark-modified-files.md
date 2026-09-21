@@ -9,13 +9,13 @@ part of the versioned source code.
 
 | File | Action | Change |
 | --- | --- | --- |
-| `dspace-api/src/main/java/org/dspace/identifier/DARK.java` | Added | Hibernate entity representing the local association between a dARK and a DSpace object. Stores the ARK, Item, dARK Minter state code (`R/D/U/P/T`), local tombstone-request flag, target, and CIDs returned by the API. |
+| `dspace-api/src/main/java/org/dspace/identifier/DARK.java` | Added | Hibernate entity representing the local association between a dARK and a DSpace object. Stores the ARK, Item, dARK Minter state code (`R/D/U/P/T`), local tombstone-request flag, target, CIDs, last Minter error, and local creation/update timestamps. |
 | `dspace-api/src/main/java/org/dspace/identifier/service/DarkService.java` | Added | Service contract for creating, locating, and updating dARK identifiers. |
 | `dspace-api/src/main/java/org/dspace/identifier/DarkServiceImpl.java` | Added | Service implementation; normalizes legacy `ark:/...` values into the compact DSpace canonical form `ark:...`. |
 | `dspace-api/src/main/java/org/dspace/identifier/dao/DarkDAO.java` | Added | DAO contract for lookups by ARK and DSpace object. |
 | `dspace-api/src/main/java/org/dspace/identifier/dao/impl/DarkDAOImpl.java` | Added | Hibernate implementation of the dARK DAO. |
-| `dspace-api/src/main/resources/org/dspace/storage/rdbms/sqlmigration/postgres/V11.0_2026.09.03__dark_identifier.sql` | Added | Creates the sequence, `dark` table, unique constraints, indexes, direct Minter state-code column, and local tombstone-request flag for PostgreSQL. |
-| `dspace-api/src/main/resources/org/dspace/storage/rdbms/sqlmigration/h2/V11.0_2026.09.03__dark_identifier.sql` | Added | H2 equivalent of the migration, used for tests and development. |
+| `dspace-api/src/main/resources/org/dspace/storage/rdbms/sqlmigration/postgres/V11.0_2026.09.03__dark_identifier.sql` | Added and modified | Creates the sequence, `dark` table, unique constraints, indexes, direct Minter state-code column, local tombstone-request flag, `last_error`, and timestamps for PostgreSQL. |
+| `dspace-api/src/main/resources/org/dspace/storage/rdbms/sqlmigration/h2/V11.0_2026.09.03__dark_identifier.sql` | Added and modified | H2 equivalent of the migration, including `last_error` and timestamps, used for tests and development. |
 | `dspace/config/hibernate.cfg.xml` | Modified | Registers the `org.dspace.identifier.DARK` Hibernate entity. |
 | `dspace/config/spring/api/core-dao-services.xml` | Modified | Registers `DarkDAOImpl` as a Spring-managed DAO. |
 | `dspace/config/spring/api/core-services.xml` | Modified | Registers `DarkServiceImpl`, `DarkClientImpl`, and `DarkMetadataBuilder` as Spring services. |
@@ -24,7 +24,7 @@ part of the versioned source code.
 
 | File | Action | Change |
 | --- | --- | --- |
-| `dspace-api/src/main/java/org/dspace/identifier/DarkIdentifierProvider.java` | Added and modified | `IdentifierService` provider that reserves, registers, looks up, updates, and removes dARKs; persists `dc.identifier.dark` without changing Handle, `dc.identifier`, or `dc.identifier.uri`; performs a non-blocking `GET /arks/{ark}` after metadata submission to refresh local state and CIDs; and exposes metadata preflight to the CLI. |
+| `dspace-api/src/main/java/org/dspace/identifier/DarkIdentifierProvider.java` | Added and modified | `IdentifierService` provider that reserves, registers, looks up, updates, and removes dARKs; persists `dc.identifier.dark` without changing Handle, `dc.identifier`, or `dc.identifier.uri`; performs a non-blocking `GET /arks/{ark}` after metadata submission; and records Minter metadata-rejection messages for retry. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkClient.java` | Added | HTTP client interface to reserve, look up, update metadata for, and tombstone ARKs. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkClientImpl.java` | Added | Apache HTTP client for the Minter API; reserves ARKs in batches, retrieves current ARK state, updates metadata, applies optional authentication and authority header, and converts legacy `ark:/...` input to `ark:...` for Minter URLs. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkArkResponse.java` | Added | DTO for an ARK response returned by the API. |
@@ -32,7 +32,7 @@ part of the versioned source code.
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkBatchError.java` | Added | DTO for per-Item errors returned by batch reservation. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkIdentifierException.java` | Added | Specific exception and error codes for dARK operations. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkMetadataRequest.java` | Added | DTO for the metadata payload sent to the Minter. |
-| `dspace-api/src/main/java/org/dspace/identifier/dark/DarkMetadataBuilder.java` | Added and modified | Builds Level 1 and OAI-DC Level 2 metadata. A later change replaced `getProperty()` with `getArrayProperty()` so every comma-separated field is read and reported during preflight. |
+| `dspace-api/src/main/java/org/dspace/identifier/dark/DarkMetadataBuilder.java` | Added and modified | Builds Level 1 and OAI-DC Level 2 metadata, reading every field from each comma-separated configuration list. |
 | `dspace/config/spring/api/identifier-service.xml` | Modified | Registers `DarkIdentifierProvider` with `IdentifierService`, using an always-true filter and `dark.cfg` configuration. |
 
 ## Administrative CLI
@@ -58,7 +58,7 @@ part of the versioned source code.
 | `dspace-api/src/test/java/org/dspace/identifier/DarkIdentifierProviderTest.java` | Added | Tests provider operations and rules, including compact metadata storage, batch reservation, and local refresh to `PUBLISHED` after metadata submission. |
 | `dspace-api/src/test/java/org/dspace/identifier/DarkServiceImplTest.java` | Added | Tests dARK service normalization and behavior. |
 | `dspace-api/src/test/java/org/dspace/identifier/dark/DarkClientImplTest.java` | Added | Tests the ARK format conversion used by the Minter. |
-| `dspace-api/src/test/java/org/dspace/identifier/dark/DarkMetadataBuilderTest.java` | Added and modified | Tests payload creation, metadata combination, and preflight with author/date fallbacks. |
+| `dspace-api/src/test/java/org/dspace/identifier/dark/DarkMetadataBuilderTest.java` | Added and modified | Tests payload creation and comma-separated metadata fallback fields. |
 
 ## Documentation
 

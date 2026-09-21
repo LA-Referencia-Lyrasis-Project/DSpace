@@ -7,6 +7,8 @@
  */
 package org.dspace.identifier;
 
+import java.time.Instant;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -15,6 +17,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import org.dspace.content.DSpaceObject;
@@ -68,6 +72,16 @@ public class DARK implements Identifier, ReloadableEntity<Integer> {
 
     @Column(name = "level2_cid", length = 128)
     private String level2Cid;
+
+    /** Last dARK Minter error encountered while submitting this identifier. */
+    @Column(name = "last_error", length = 4096)
+    private String lastError;
+
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "timestamp with time zone")
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false, columnDefinition = "timestamp with time zone")
+    private Instant updatedAt;
 
     /**
      * Protected constructor, create object using:
@@ -158,5 +172,33 @@ public class DARK implements Identifier, ReloadableEntity<Integer> {
 
     public void setLevel2Cid(String level2Cid) {
         this.level2Cid = level2Cid;
+    }
+
+    public String getLastError() {
+        return lastError;
+    }
+
+    public void setLastError(String lastError) {
+        this.lastError = lastError;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        Instant now = Instant.now();
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
     }
 }

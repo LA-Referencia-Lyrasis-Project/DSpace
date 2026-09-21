@@ -9,7 +9,6 @@ package org.dspace.identifier.dark;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,24 +113,6 @@ public class DarkMetadataBuilder {
         );
     }
 
-    /**
-     * Returns the Level 1 fields required by dARK that are absent from an Item.
-     *
-     * @param item Item to validate
-     * @return configured metadata fields that require a value before registration
-     */
-    public List<String> missingRequiredMetadata(Item item) {
-        List<String> missing = new ArrayList<>();
-        if (values(item, CFG_CREATOR_METADATA, DEFAULT_CREATOR_METADATA).isEmpty()) {
-            missing.add(configuredMetadataFields(CFG_CREATOR_METADATA, DEFAULT_CREATOR_METADATA));
-        }
-        String date = firstValue(item, CFG_DATE_METADATA, DEFAULT_DATE_METADATA);
-        if (extractYear(date) == null) {
-            missing.add(configuredMetadataFields(CFG_DATE_METADATA, DEFAULT_DATE_METADATA));
-        }
-        return missing;
-    }
-
     protected String buildTargetUrl(Context context, Item item) throws SQLException {
         String handle = handleService.findHandle(context, item);
         if (StringUtils.isNotBlank(handle)) {
@@ -163,17 +144,13 @@ public class DarkMetadataBuilder {
     }
 
     private List<String> values(Item item, String configKey, String defaultField) {
-        return Arrays.stream(configurationService.getArrayProperty(configKey, new String[] {defaultField}))
+        return java.util.Arrays.stream(configurationService.getArrayProperty(configKey, new String[] {defaultField}))
             .map(String::trim)
             .filter(StringUtils::isNotBlank)
             .flatMap(field -> itemService.getMetadataByMetadataString(item, field).stream())
             .map(MetadataValue::getValue)
             .filter(StringUtils::isNotBlank)
             .collect(Collectors.toList());
-    }
-
-    private String configuredMetadataFields(String configKey, String defaultField) {
-        return String.join(", ", configurationService.getArrayProperty(configKey, new String[] {defaultField}));
     }
 
     private String extractYear(String date) {

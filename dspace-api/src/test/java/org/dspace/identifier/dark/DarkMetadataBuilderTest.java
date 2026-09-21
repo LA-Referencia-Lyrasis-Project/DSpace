@@ -117,20 +117,6 @@ public class DarkMetadataBuilderTest {
         assertEquals(List.of("Contributor Author", "Creator Author"), request.getMinimalMetadata().get("authors"));
     }
 
-    @Test
-    public void testMissingRequiredMetadataUsesAllConfiguredFallbackFields() {
-        List<MetadataValue> creators = List.of(metadata("Fallback Author"));
-        List<MetadataValue> dates = List.of(metadata("2020-08-05"));
-
-        metadataFields(DarkMetadataBuilder.CFG_CREATOR_METADATA,
-                       "dc.creator", "dc.contributor.author", "dc.contributor");
-        metadataFields(DarkMetadataBuilder.CFG_DATE_METADATA, "dc.date", "dc.date.issued");
-        when(itemService.getMetadataByMetadataString(item, "dc.contributor.author")).thenReturn(creators);
-        when(itemService.getMetadataByMetadataString(item, "dc.date.issued")).thenReturn(dates);
-
-        assertTrue(builder.missingRequiredMetadata(item).isEmpty());
-    }
-
     private void metadataFields(String key, String... fields) {
         when(builder.configurationService.getArrayProperty(eq(key), any(String[].class))).thenReturn(fields);
     }

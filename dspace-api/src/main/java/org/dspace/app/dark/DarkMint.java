@@ -40,7 +40,7 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
     private enum MintResult {
         MINTED,
         ALREADY_ASSIGNED,
-        MISSING_METADATA
+        MINTER_ERROR
     }
 
     private ItemService itemService;
@@ -93,10 +93,11 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             return;
         }
 
+        MintResult result;
         Context context = new Context();
         context.turnOffAuthorisationSystem();
         try {
-            mintOne(context, UUID.fromString(commandLine.getOptionValue("mint-uuid")));
+            result = mintOne(context, UUID.fromString(commandLine.getOptionValue("mint-uuid")));
             context.complete();
         } catch (Exception e) {
             context.abort();
@@ -104,20 +105,22 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         } finally {
             context.restoreAuthSystemState();
         }
+        if (MintResult.MINTER_ERROR.equals(result)) {
+            throw new IllegalStateException("dARK Minter rejected the Item metadata; see the local dARK error message.");
+        }
     }
 
-    private void mintOne(Context context, UUID uuid) throws Exception {
+    private MintResult mintOne(Context context, UUID uuid) throws Exception {
         Item item = itemService.find(context, uuid);
         if (item == null) {
             throw new IllegalArgumentException("Item not found: " + uuid);
         }
-        mintIfMissing(context, item);
+        return mintIfMissing(context, item);
     }
 
     private void mintAll() throws Exception {
         int minted = 0;
         int alreadyAssigned = 0;
-        int missingMetadata = 0;
         int failed = 0;
         int batchSize = configurationService.getIntProperty(DarkIdentifierProvider.CFG_BATCH_SIZE, DEFAULT_BATCH_SIZE);
         if (batchSize < 1) {
@@ -132,12 +135,10 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             MintSummary summary = mintBatch(itemIds.subList(start, end), batchNumber, batchCount);
             minted += summary.minted;
             alreadyAssigned += summary.alreadyAssigned;
-            missingMetadata += summary.missingMetadata;
             failed += summary.failed;
         }
-        handler.logInfo(String.format("dARK mint completed: %d minted, %d already assigned, " +
-                                      "%d skipped for missing metadata, %d failed.",
-                                      minted, alreadyAssigned, missingMetadata, failed));
+        handler.logInfo(String.format("dARK mint completed: %d minted, %d already assigned, %d failed.",
+                                      minted, alreadyAssigned, failed));
         if (failed > 0) {
             throw new IllegalStateException("dARK mint completed with " + failed + " failures.");
         }
@@ -179,7 +180,6 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
     private MintSummary mintBatch(List<UUID> itemIds, int batchNumber, int batchCount) {
         MintSummary summary = new MintSummary();
         List<Item> itemsToMint = new ArrayList<>();
-        int registered = 0;
         Context context = new Context();
         context.turnOffAuthorisationSystem();
         try {
@@ -195,8 +195,6 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
                     MintResult result = checkMintable(context, item);
                     if (MintResult.ALREADY_ASSIGNED.equals(result)) {
                         summary.alreadyAssigned++;
-                    } else if (MintResult.MISSING_METADATA.equals(result)) {
-                        summary.missingMetadata++;
                     } else {
                         itemsToMint.add(item);
                     }
@@ -209,13 +207,9 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
             if (!itemsToMint.isEmpty()) {
                 handler.logInfo(String.format("Minting dARK batch %d/%d (%d ARKs).",
                                               batchNumber, batchCount, itemsToMint.size()));
-                registered = registerBatch(context, itemsToMint);
+                registerBatch(context, itemsToMint, summary);
             }
             context.complete();
-            summary.minted += registered;
-            for (Item item : itemsToMint) {
-                handler.logInfo("Minted dARK for Item " + item.getID() + ".");
-            }
         } catch (Exception e) {
             summary.failed += itemsToMint.size();
             log.error("Unable to process dARK batch.", e);
@@ -229,11 +223,10 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
     private static class MintSummary {
         private int minted;
         private int alreadyAssigned;
-        private int missingMetadata;
         private int failed;
     }
 
-    private int registerBatch(Context context, List<Item> batch) throws Exception {
+    private void registerBatch(Context context, List<Item> batch, MintSummary summary) throws Exception {
         Map<UUID, String> arks = darkIdentifierProvider.reserveBatch(context, batch);
         for (Item item : batch) {
             String ark = arks.get(item.getID());
@@ -241,8 +234,15 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
                 throw new IllegalStateException("dARK batch reservation returned no ARK for Item " + item.getID());
             }
             identifierService.register(context, item, ark);
+            DARK dark = darkIdentifierProvider.findDARKByObject(context, item);
+            if (dark != null && StringUtils.isNotBlank(dark.getLastError())) {
+                summary.failed++;
+                handler.logError("dARK Minter rejected Item " + item.getID() + ": " + dark.getLastError());
+            } else {
+                summary.minted++;
+                handler.logInfo("Minted dARK for Item " + item.getID() + ".");
+            }
         }
-        return batch.size();
     }
 
     private MintResult mintIfMissing(Context context, Item item) throws Exception {
@@ -252,6 +252,11 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
         }
 
         identifierService.register(context, item, DARK.class);
+        DARK dark = darkIdentifierProvider.findDARKByObject(context, item);
+        if (dark != null && StringUtils.isNotBlank(dark.getLastError())) {
+            handler.logError("dARK Minter rejected Item " + item.getID() + ": " + dark.getLastError());
+            return MintResult.MINTER_ERROR;
+        }
         handler.logInfo("Minted dARK for Item " + item.getID() + ".");
         return MintResult.MINTED;
     }
@@ -259,18 +264,16 @@ public class DarkMint extends DSpaceRunnable<DarkMintScriptConfiguration> {
     private MintResult checkMintable(Context context, Item item) throws Exception {
         String ark = identifierService.lookup(context, item, DARK.class);
         if (StringUtils.isNotBlank(ark)) {
+            DARK dark = darkIdentifierProvider.findDARKByObject(context, item);
+            if (dark != null && StringUtils.isNotBlank(dark.getLastError())) {
+                handler.logInfo("Retrying dARK " + ark + " for Item " + item.getID() + " after a Minter error.");
+                return MintResult.MINTED;
+            }
             handler.logInfo("Item " + item.getID() + " already has dARK " + ark + ".");
             return MintResult.ALREADY_ASSIGNED;
         }
 
         darkIdentifierProvider.checkMintable(context, item);
-        List<String> missingMetadata = darkIdentifierProvider.missingRequiredMetadata(item);
-        if (!missingMetadata.isEmpty()) {
-            handler.logInfo("Item " + item.getID() + " skipped: missing required dARK metadata " +
-                            String.join(", ", missingMetadata) + ".");
-            return MintResult.MISSING_METADATA;
-        }
-
         return MintResult.MINTED;
     }
 

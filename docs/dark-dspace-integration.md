@@ -78,13 +78,12 @@ identifier.dark.metadata.abstract = dc.description.abstract
 identifier.dark.metadata.subject = dc.subject
 ```
 
-For Level 1, the Minter requires at least one author and a year with four
-digits. With the mapping above, for example, an Item can meet these requirements
-using `dc.creator` and `dc.date`, even if it has neither
-`dc.contributor.author` nor `dc.date.issued`.
+For Level 1, the Minter validates its own required fields, such as title,
+author, and year. DSpace sends every configured value and does not prevalidate
+these requirements. A Minter rejection is logged and stored in the local
+`dark.last_error` column for correction and retry.
 
-List order determines the order of values sent. It does not limit validation:
-the CLI preflight looks for values in every configured field.
+List order determines the order of values sent.
 
 ## Automatic flow when creating an Item
 
@@ -112,11 +111,16 @@ sequenceDiagram
     else local state requires metadata submission
         P->>P: build Level 1 and OAI-DC Level 2
         P->>M: PUT /arks/{ark}
-        M-->>P: accepted state and CIDs
-        P->>DB: update local association and dc.identifier.dark
-        P->>M: GET /arks/{ark}
-        M-->>P: current state and CIDs
-        P->>DB: refresh local state and CIDs
+        alt metadata accepted
+            M-->>P: accepted state and CIDs
+            P->>DB: update local association and dc.identifier.dark
+            P->>M: GET /arks/{ark}
+            M-->>P: current state and CIDs
+            P->>DB: refresh local state and CIDs
+        else Minter rejects metadata
+            M-->>P: validation error
+            P->>DB: save last_error on local association
+        end
     end
     P-->>D: ark:NAAN/nome
 ```
@@ -135,9 +139,9 @@ association is marked as published. A `DRAFT` (`D`) or `UPDATE` (`U`) response
 is valid and does not block Item registration; a temporary read failure is
 logged as a warning and does not undo the accepted metadata update.
 
-If required metadata is absent during the automatic flow, the Minter API may
-reject the registration. For existing repository content, use the CLI, which
-performs preflight before reserving an ARK.
+If the Minter rejects metadata during the automatic flow, DSpace retains the
+local reserved ARK and records the response in `dark.last_error`. After
+correcting the Item, an administrator can retry it with `--mint-uuid`.
 
 ## Command-line assignment
 
@@ -155,8 +159,8 @@ The options are mutually exclusive.
 
 ### `--mint-uuid`
 
-Processes one Item. It checks for an existing local dARK and validates required
-metadata before reserving an ARK.
+Processes one Item. It checks for an existing local dARK and retries the same
+ARK when its local association contains a Minter error.
 
 ```mermaid
 sequenceDiagram
@@ -167,29 +171,35 @@ sequenceDiagram
     participant DB as DSpace Database
 
     C->>DB: load Item by UUID
-    C->>P: check existing dARK and preflight metadata
-    alt Item is eligible
+    C->>P: check existing local dARK
+    alt Item has no dARK or a saved Minter error
         C->>D: register(Item, DARK)
         D->>P: register(Item)
         P->>M: POST /arks
         M-->>P: reserved ARK (R)
         P->>DB: save local association
         P->>M: PUT /arks/{ark}
-        M-->>P: accepted state and CIDs
-        P->>DB: update association and dc.identifier.dark
-        P->>M: GET /arks/{ark}
-        M-->>P: current state and CIDs
-        P->>DB: refresh local state and CIDs
-    else Item already has dARK or fails preflight
+        alt metadata accepted
+            M-->>P: accepted state and CIDs
+            P->>DB: update association and dc.identifier.dark
+            P->>M: GET /arks/{ark}
+            M-->>P: current state and CIDs
+            P->>DB: refresh local state and CIDs
+        else Minter rejects metadata
+            M-->>P: validation error
+            P->>DB: save last_error
+            P-->>C: log Minter error
+        end
+    else Item already has a dARK without an error
         C->>C: log result without reserving an ARK
     end
 ```
 
 ### `--mint-all`
 
-Queries only Items without a local dARK association. Eligible Items are
-preflighted and reserved in batches of `identifier.dark.batch-size`; each
-reserved Item is then registered individually.
+Queries only Items without a local dARK association. Items are reserved in
+batches of `identifier.dark.batch-size`; each reserved Item is then registered
+individually and the Minter validates its metadata.
 
 ```mermaid
 sequenceDiagram
@@ -204,7 +214,7 @@ sequenceDiagram
     DB-->>P: candidate Item UUIDs
     P-->>C: candidate Item UUIDs
     loop each CLI batch
-        C->>C: load Items and preflight metadata
+        C->>C: load Items and apply the dARK filter
         C->>P: reserveBatch(eligible Items)
         P->>M: POST /arks/batch
         M-->>P: reserved ARKs (R)
@@ -213,20 +223,25 @@ sequenceDiagram
             C->>D: register(Item, reserved ARK)
             D->>P: submit metadata
             P->>M: PUT /arks/{ark}
-            M-->>P: accepted state and CIDs
-            P->>DB: update association and dc.identifier.dark
-            P->>M: GET /arks/{ark}
-            M-->>P: current state and CIDs
-            P->>DB: refresh local state and CIDs
+            alt metadata accepted
+                M-->>P: accepted state and CIDs
+                P->>DB: update association and dc.identifier.dark
+                P->>M: GET /arks/{ark}
+                M-->>P: current state and CIDs
+                P->>DB: refresh local state and CIDs
+            else Minter rejects metadata
+                M-->>P: validation error
+                P->>DB: save last_error
+                P-->>C: log Minter error
+            end
         end
         C->>DB: commit batch
     end
 ```
 
 At the end of `--mint-all`, the script reports counts for `minted`, `already assigned`,
-`skipped for missing metadata`, and `failed`. A failure for one Item does not
-stop the traversal; at the end, the command exits with an error if any failure
-occurred.
+and `failed`. A failure for one Item does not stop the traversal; at the end,
+the command exits with an error if any failure occurred.
 
 ### `--refresh-status`
 
@@ -277,21 +292,22 @@ sequenceDiagram
     P-->>C: log local count
 ```
 
-Example preflight result for an Item without an author:
+Example Minter validation error for an Item without a title:
 
 ```text
-Item <uuid> skipped: missing required dARK metadata dc.creator, dc.contributor.author, dc.contributor.
+dARK Minter rejected Item <uuid>: dARK API returned HTTP 422: title is required
 ```
 
-The message lists all configured author fields because none contains a usable
-value. It does not mean that only the first field was tested.
+The same message is stored in `dark.last_error`. After correcting the Item,
+run `bin/dspace dark --mint-uuid <uuid-do-item>` to submit metadata again for
+the existing reserved ARK.
 
 ## Local persistence
 
 The migration creates the sequence and `dark` table. Each row associates an
 `Item` with a unique ARK and stores, among other data, its state,
-`client_item_id`, target URL, and metadata CIDs. Indexes support lookups by ARK
-and DSpace object.
+`client_item_id`, target URL, metadata CIDs, and the last Minter error message.
+Indexes support lookups by ARK and DSpace object.
 
 The `dark.status` column stores the dARK Minter state code directly: `R`
 (reserved), `D` (draft), `U` (update), `P` (published), or `T` (tombstone).

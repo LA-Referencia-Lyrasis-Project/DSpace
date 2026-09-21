@@ -20,7 +20,10 @@ CREATE TABLE dark
   target           VARCHAR(1024),
   metadata_cid     VARCHAR(128),
   level1_cid       VARCHAR(128),
-  level2_cid       VARCHAR(128)
+  level2_cid       VARCHAR(128),
+  last_error       VARCHAR(4096),
+  created_at       TIMESTAMP WITH TIME ZONE NOT NULL,
+  updated_at       TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE INDEX dark_ark_idx ON dark(ark);

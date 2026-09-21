@@ -8,6 +8,7 @@
 package org.dspace.identifier;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -34,6 +35,7 @@ import org.dspace.core.Context;
 import org.dspace.identifier.dark.DarkArkResponse;
 import org.dspace.identifier.dark.DarkBatchResponse;
 import org.dspace.identifier.dark.DarkClient;
+import org.dspace.identifier.dark.DarkIdentifierException;
 import org.dspace.identifier.dark.DarkMetadataBuilder;
 import org.dspace.identifier.dark.DarkMetadataRequest;
 import org.dspace.identifier.service.DarkService;
@@ -241,6 +243,35 @@ public class DarkIdentifierProviderTest {
     }
 
     @Test
+    public void testRegisterStoresMinterErrorAndClearsItAfterRetry() throws Exception {
+        DarkMetadataRequest request = new DarkMetadataRequest();
+        when(provider.metadataBuilder.build(eq(context), eq(item), eq("platform-demo-1788435035"),
+                                            eq("ark:12345/abc123"))).thenReturn(request);
+        when(provider.itemService.getMetadata(any(Item.class), eq("dc"), eq("identifier"), eq("dark"),
+                                              org.mockito.ArgumentMatchers.isNull()))
+            .thenReturn(java.util.Collections.emptyList());
+        when(darkService.findByArk(eq(context), eq("ark:12345/abc123")))
+            .thenAnswer(invocation -> storedDARK.get());
+        when(darkClient.updateMetadata("ark:12345/abc123", request))
+            .thenThrow(new DarkIdentifierException("dARK API returned HTTP 422: title is required",
+                                                   DarkIdentifierException.BAD_REQUEST))
+            .thenReturn(new DarkArkResponse());
+        DarkArkResponse refreshed = new DarkArkResponse();
+        refreshed.setArk("ark:12345/abc123");
+        refreshed.setState("D");
+        when(darkClient.getARK("ark:12345/abc123")).thenReturn(refreshed);
+
+        provider.register(context, item, "ark:12345/abc123");
+
+        assertEquals("dARK API returned HTTP 422: title is required", storedDARK.get().getLastError());
+
+        provider.register(context, item, "ark:12345/abc123");
+
+        assertEquals(null, storedDARK.get().getLastError());
+        verify(darkClient, times(2)).updateMetadata("ark:12345/abc123", request);
+    }
+
+    @Test
     public void testLocalTombstoneRequestHidesDarkFromItemLookup() throws Exception {
         DARK dark = new DARK();
         dark.setArk("ark:12345/abc123");
@@ -316,5 +347,17 @@ public class DarkIdentifierProviderTest {
         when(darkService.countItemsWithDARK(context)).thenReturn(42L);
 
         assertEquals(42L, provider.countItemsWithDARK(context));
+    }
+
+    @Test
+    public void testDarkTimestampsAreSetOnPersistAndUpdate() {
+        DARK dark = new DARK();
+
+        dark.onCreate();
+
+        assertNotNull(dark.getCreatedAt());
+        assertNotNull(dark.getUpdatedAt());
+        dark.onUpdate();
+        assertNotNull(dark.getUpdatedAt());
     }
 }
