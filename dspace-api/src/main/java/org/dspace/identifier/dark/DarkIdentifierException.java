@@ -27,7 +27,6 @@ public class DarkIdentifierException extends IdentifierException {
     public static final int UNRECOGNIZED = 10;
     public static final int UNAUTHORIZED_METADATA_MANIPULATION = 11;
     public static final int DARK_IS_TOMBSTONED = 12;
-
     private final int code;
 
     public DarkIdentifierException() {

@@ -25,5 +25,4 @@ public interface DarkClient {
     DarkArkResponse updateMetadata(String ark, DarkMetadataRequest metadata)
         throws DarkIdentifierException;
 
-    void tombstoneARK(String ark, String authorityId) throws DarkIdentifierException;
 }

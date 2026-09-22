@@ -20,7 +20,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
@@ -109,13 +108,6 @@ public class DarkClientImpl implements DarkClient {
         return execute(put, DarkArkResponse.class);
     }
 
-    @Override
-    public void tombstoneARK(String ark, String authorityId) throws DarkIdentifierException {
-        HttpDelete delete = new HttpDelete(minterApiUrl() + "/arks/" + minterArk(ark));
-        applyHeaders(delete, authorityId);
-        execute(delete, Void.class);
-    }
-
     static String minterArk(String ark) {
         return ark.startsWith("ark:/") ? "ark:" + ark.substring("ark:/".length()) : ark;
     }
@@ -167,9 +159,6 @@ public class DarkClientImpl implements DarkClient {
             String content = response.getEntity() == null ? null : EntityUtils.toString(response.getEntity(), "UTF-8");
             if (statusCode >= HttpStatus.SC_BAD_REQUEST) {
                 throw mapError(statusCode, content);
-            }
-            if (Void.class.equals(responseType)) {
-                return null;
             }
             if (StringUtils.isBlank(content)) {
                 throw new DarkIdentifierException("dARK API returned an empty response.",

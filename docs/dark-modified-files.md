@@ -25,7 +25,7 @@ part of the versioned source code.
 | File | Action | Change |
 | --- | --- | --- |
 | `dspace-api/src/main/java/org/dspace/identifier/DarkIdentifierProvider.java` | Added and modified | `IdentifierService` provider that reserves, registers, looks up, updates, and removes local dARK associations without requesting remote tombstones; persists `dc.identifier.dark` without changing Handle, `dc.identifier`, or `dc.identifier.uri`; performs a non-blocking `GET /arks/{ark}` after metadata submission; and records Minter metadata-rejection messages for retry. |
-| `dspace-api/src/main/java/org/dspace/identifier/dark/DarkClient.java` | Added | HTTP client interface to reserve, look up, update metadata for, and tombstone ARKs. |
+| `dspace-api/src/main/java/org/dspace/identifier/dark/DarkClient.java` | Added | HTTP client interface to reserve ARKs, look them up, and update their metadata. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkClientImpl.java` | Added | Apache HTTP client for the Minter API; reserves ARKs in batches, retrieves current ARK state, updates metadata, applies optional authentication and authority header, and converts legacy `ark:/...` input to `ark:...` for Minter URLs. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkArkResponse.java` | Added | DTO for an ARK response returned by the API. |
 | `dspace-api/src/main/java/org/dspace/identifier/dark/DarkBatchResponse.java` | Added | DTO for a batch reservation response. |

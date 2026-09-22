@@ -411,7 +411,7 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         throws IdentifierException, SQLException {
         String ark = darkService.formatIdentifier(identifier);
         DARK dark = darkService.findByArk(context, ark);
-        if (dark == null) {
+        if (dark == null || isTombstoned(dark)) {
             throw new DarkIdentifierException("Unable to find dARK.", DarkIdentifierException.DARK_DOES_NOT_EXIST);
         }
         if (!Objects.equals(dark.getDSpaceObject(), dso)) {
@@ -721,7 +721,11 @@ public class DarkIdentifierProvider extends FilteredIdentifierProvider {
         return null;
     }
 
+    /**
+     * A tombstone state is received from the Minter and retained locally. DSpace never requests this state.
+     */
     private boolean isTombstoned(DARK dark) {
         return TOMBSTONED.equals(dark.getStatus());
     }
+
 }

@@ -323,7 +323,8 @@ standard DSpace update process before enabling the provider in a new database.
 
 The table does not contain `resource_type_id` or `tombstone_requested`. dARK
 records are Item associations, and DSpace does not request tombstoning from the
-dARK platform.
+dARK platform. If a status refresh returns `T`, DSpace retains that state and
+does not expose the dARK as an active local identifier.
 
 ## Administrative web UI
 

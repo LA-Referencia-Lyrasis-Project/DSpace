@@ -272,10 +272,10 @@ public class DarkIdentifierProviderTest {
     }
 
     @Test
-    public void testLocalTombstoneRequestHidesDarkFromItemLookup() throws Exception {
+    public void testTombstonedStatusFromMinterIsNotReturnedAsActiveDark() throws Exception {
         DARK dark = new DARK();
         dark.setArk("ark:12345/abc123");
-        dark.setTombstoneRequested(true);
+        dark.setStatus(DarkIdentifierProvider.TOMBSTONED);
         storedDARK.set(dark);
 
         assertEquals(null, provider.getDARKByObject(context, item));
