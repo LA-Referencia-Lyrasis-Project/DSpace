@@ -82,6 +82,7 @@
         <mapping class="org.dspace.harvest.HarvestedItem"/>
 
         <mapping class="org.dspace.identifier.DOI"/>
+        <mapping class="org.dspace.identifier.DARK"/>
 
         <mapping class="org.dspace.versioning.Version"/>
         <mapping class="org.dspace.versioning.VersionHistory"/>

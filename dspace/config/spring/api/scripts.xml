@@ -67,6 +67,11 @@
         <property name="dspaceRunnableClass" value="org.dspace.administer.ProcessCleanerCli"/>
     </bean>
 
+    <bean id="bulk-import" class="org.dspace.app.bulkedit.BulkImportCliScriptConfiguration">
+        <property name="description" value="Perform the bulk import of an excel file with a list of item to add, update or remove"/>
+        <property name="dspaceRunnableClass" value="org.dspace.app.bulkedit.BulkImportCli"/>
+    </bean>
+
     <bean id="filter-media" class="org.dspace.app.mediafilter.MediaFilterScriptConfiguration">
         <property name="description" value="Perform the media filtering to extract full text from documents and to create thumbnails"/>
         <property name="dspaceRunnableClass" value="org.dspace.app.mediafilter.MediaFilterScript"/>
@@ -80,6 +85,11 @@
     <bean id="solr-database-resync" class="org.dspace.app.solrdatabaseresync.SolrDatabaseResyncCliScriptConfiguration">
         <property name="description" value="Update the database status of Items in solr"/>
         <property name="dspaceRunnableClass" value="org.dspace.app.solrdatabaseresync.SolrDatabaseResyncCli"/>
+    </bean>
+
+    <bean id="dark" class="org.dspace.app.dark.DarkMintScriptConfiguration">
+        <property name="description" value="Manage local dARK identifiers and publication states"/>
+        <property name="dspaceRunnableClass" value="org.dspace.app.dark.DarkMint"/>
     </bean>
 
     <bean id="import" class="org.dspace.app.itemimport.ItemImportCLIScriptConfiguration" primary="true">

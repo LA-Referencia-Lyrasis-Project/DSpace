@@ -1,0 +1,28 @@
+/**
+ * The contents of this file are subject to the license and copyright
+ * detailed in the LICENSE and NOTICE files at the root of the source
+ * tree and available online at
+ *
+ * http://www.dspace.org/license/
+ */
+package org.dspace.identifier.dark;
+
+import java.util.List;
+
+/**
+ * Client for the dARK minter API.
+ */
+public interface DarkClient {
+
+    DarkArkResponse reserveARK(String authorityId, String naan, String clientItemId)
+        throws DarkIdentifierException;
+
+    DarkBatchResponse reserveARKs(String authorityId, String naan, List<String> clientItemIds)
+        throws DarkIdentifierException;
+
+    DarkArkResponse getARK(String ark) throws DarkIdentifierException;
+
+    DarkArkResponse updateMetadata(String ark, DarkMetadataRequest metadata)
+        throws DarkIdentifierException;
+
+}

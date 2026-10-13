@@ -96,6 +96,23 @@
     <bean id="org.dspace.identifier.doi.DOIConnector"
 	    class="org.dspace.identifier.doi.crossref.CrossRefConnector"/>
 
+    <!--
+        DarkIdentifierProvider mints and registers dARK persistent identifiers
+        for Items. The provider stores the local association in the dark table,
+        writes the configured Item metadata field, and delegates remote calls to
+        org.dspace.identifier.dark.DarkClient.
+
+        Configure dARK in [dspace]/config/modules/dark.cfg. The provider is
+        disabled by default and can be enabled with identifier.dark.enabled.
+    -->
+    <bean id="org.dspace.identifier.DarkIdentifierProvider"
+        class="org.dspace.identifier.DarkIdentifierProvider"
+        scope="singleton">
+        <property name="configurationService"
+            ref="org.dspace.services.ConfigurationService" />
+        <property name="filter" ref="always_true_filter" />
+    </bean>
+
     <!-- The DOIConnector will handle the API calls to your DOI registration
          agency for the DOIIdentifierProvider. If your registration agency
          tells you to use the DataCite API directly, you can use the
