@@ -2,7 +2,7 @@
 
 ## Objective
 
-Document Solr 10.1 beta schema requirements for semantic and hybrid search in DSpace, with explicit separation between:
+Document Solr 9.11 schema requirements for semantic and hybrid search in DSpace, with explicit separation between:
 
 - Single-vector mode (`embeddings.solr.multi.vectors=false`): one vector per item
 - MultiVectors mode (`embeddings.solr.multi.vectors=true`): nested child vectors per item

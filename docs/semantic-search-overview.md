@@ -7,7 +7,7 @@ Esta funcionalidade adiciona dois modos beta à busca Discovery do DSpace, além
 - **Busca semântica:** compara o significado da consulta e dos metadados dos itens por meio de embeddings.
 - **Busca híbrida:** combina o ranking da busca léxica com o ranking vetorial usando **RRF** (*Reciprocal Rank Fusion*).
 
-A implementação usa recursos de busca vetorial do **Solr 10.1 beta**, incluindo vetores densos, múltiplos vetores por item e a combinação de rankings por RRF.
+A implementação usa recursos de busca vetorial do **Solr 9.11**, incluindo vetores densos, múltiplos vetores por item e a combinação de rankings por RRF.
 
 ## Indexação com embeddings
 
@@ -30,7 +30,7 @@ O REST aceita `searchType=lexical|semantic|hybrid` nos endpoints Discovery.
 
 1. A consulta é normalizada e enviada ao serviço de embeddings.
 2. **Semântica:** `SolrSemanticSearchPlugin` substitui a consulta textual por uma consulta vetorial `knn` ou `vectorSimilarity` no Solr.
-3. **Híbrida:** `SolrHybridSearchPlugin` envia a consulta léxica e a vetorial ao handler `/combined` do Solr 10.1 beta. O `CombinedQuerySearchHandler` aplica RRF e retorna uma lista única ordenada.
+3. **Híbrida:** `SolrHybridSearchPlugin` envia a consulta léxica e a vetorial ao handler `/combined` do Solr 9.11. O `CombinedQuerySearchHandler` aplica RRF e retorna uma lista única ordenada.
 4. O campo `score` retornado pelo Solr é incluído na resposta REST.
 
 Em caso de indisponibilidade do serviço de embeddings, a indexação e a busca mantêm o comportamento léxico, registrando o erro.
