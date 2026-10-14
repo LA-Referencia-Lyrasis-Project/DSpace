@@ -1,3 +1,5 @@
+name: solr-dspace
+
 services:
   dspace-solr:
     container_name: solr-dspace
