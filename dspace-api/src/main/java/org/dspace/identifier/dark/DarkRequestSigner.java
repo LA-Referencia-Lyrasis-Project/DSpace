@@ -19,7 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-/** DARK2 wire encoding, adapted from the dARK Java reference's Dark2Signer. */
+/** dARK request signing, adapted from the dARK Java reference's Dark2Signer. */
 final class DarkRequestSigner {
 
     private DarkRequestSigner() { }
@@ -38,7 +38,7 @@ final class DarkRequestSigner {
         for (String line : lines) {
             if (line == null || line.isBlank() || line.contains("\r") || line.contains("\n")
                 || !line.equals(line.trim())) {
-                throw new IllegalArgumentException("Invalid DARK2 canonical field");
+                throw new IllegalArgumentException("Invalid dARK canonical field");
             }
         }
         Signature signature = Signature.getInstance("Ed25519");

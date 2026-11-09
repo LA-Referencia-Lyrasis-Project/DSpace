@@ -80,8 +80,8 @@ The dARK project itself was not modified. Changes in installation or build
 directories, such as `compiled/`, are local deployment artifacts and do not
 replace the source files listed above.
 
-## DARK2 Minter authentication
+## dARK Minter authentication
 
-The additional backend, CLI, REST, Angular and test files for optional DARK2
+The additional backend, CLI, REST, Angular and test files for optional dARK
 support are listed in [dARK Minter authentication](dark-minter-authentication.md#changed-components).
 That guide also covers configuration, key custody, registration, migration and rollback.

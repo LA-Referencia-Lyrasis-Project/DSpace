@@ -36,6 +36,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicStatusLine;
 import org.apache.http.util.EntityUtils;
 import org.dspace.app.client.DSpaceHttpClientFactory;
@@ -205,6 +206,39 @@ public class DarkClientAuthenticationTest {
             }
         }
         verify(http, times(5)).execute(any(HttpUriRequest.class));
+    }
+
+    @Test
+    public void headersRequiredIdentifiesUnsignedRequestsWithoutLeakingCredentials() throws Exception {
+        when(configuration.getBooleanProperty(DarkAuthenticationService.CFG_ENABLED, false)).thenReturn(false);
+        reply(401, "UNTRUSTED-SECRET-RESPONSE");
+        when(response.getFirstHeader("X-DARK-Error-Code"))
+            .thenReturn(new BasicHeader("X-DARK-Error-Code", "SIGNED_AUTH_HEADERS_REQUIRED"));
+        DarkIdentifierException error = assertThrows(DarkIdentifierException.class,
+            () -> dark.reserveARKs(AUTHORITY, "12345", List.of("item")));
+        assertTrue(error.getMessage().contains("The request was not signed"));
+        assertTrue(error.getMessage().contains("identifier.dark.auth.enabled=true"));
+        assertTrue(error.getMessage().contains("X-DARK-Signature"));
+        assertFalse(error.getMessage().contains("UNTRUSTED-SECRET"));
+        assertEquals(DarkIdentifierException.AUTHENTICATION_ERROR, error.getCode());
+        verify(http).execute(any(HttpUriRequest.class));
+    }
+
+    @Test
+    public void headersRequiredDistinguishesPreparedSignaturesFromGatewayProblems() throws Exception {
+        reply(401, "UNTRUSTED-SECRET-RESPONSE");
+        when(response.getFirstHeader("X-DARK-Error-Code"))
+            .thenReturn(new BasicHeader("X-DARK-Error-Code", "SIGNED_AUTH_HEADERS_REQUIRED"));
+        DarkIdentifierException error = assertThrows(DarkIdentifierException.class,
+            () -> dark.reserveARKs(AUTHORITY, "12345", List.of("item")));
+        assertTrue(error.getMessage().contains("All six dARK headers were prepared locally"));
+        assertTrue(error.getMessage().contains("proxy/gateway"));
+        assertFalse(error.getMessage().contains("The request was not signed"));
+        assertFalse(error.getMessage().contains("UNTRUSTED-SECRET"));
+        ArgumentCaptor<HttpUriRequest> requests = ArgumentCaptor.forClass(HttpUriRequest.class);
+        verify(http).execute(requests.capture());
+        assertFalse(error.getMessage().contains(requests.getValue().getFirstHeader("X-DARK-Signature").getValue()));
+        assertFalse(error.getMessage().contains(requests.getValue().getFirstHeader("X-DARK-Nonce").getValue()));
     }
 
     @Test

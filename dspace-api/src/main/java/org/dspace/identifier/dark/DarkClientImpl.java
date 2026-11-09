@@ -57,6 +57,9 @@ public class DarkClientImpl implements DarkClient {
     private static final String AUTHORITY_ID_HEADER = "X-DARK-Authority-Id";
     private static final String SIGNATURE_HEADER = "X-DARK-Signature";
     private static final String ERROR_CODE_HEADER = "X-DARK-Error-Code";
+    private static final String HEADERS_REQUIRED_ERROR = "SIGNED_AUTH_HEADERS_REQUIRED";
+    private static final List<String> SIGNED_AUTH_HEADERS = List.of(AUTHORITY_ID_HEADER, "X-DARK-Key-Id",
+        "X-DARK-Timestamp", "X-DARK-Nonce", "X-DARK-Content-SHA256", SIGNATURE_HEADER);
     /** Machine-readable Minter error codes only; anything else is never echoed into exception messages. */
     private static final Pattern ERROR_CODE_PATTERN = Pattern.compile("[A-Z][A-Z0-9_]{0,127}");
 
@@ -204,6 +207,7 @@ public class DarkClientImpl implements DarkClient {
 
     private <T> T execute(HttpUriRequest request, Class<T> responseType) throws DarkIdentifierException {
         boolean signed = request.containsHeader(SIGNATURE_HEADER);
+        String preparedHeadersDiagnostic = signedHeadersDiagnostic(request);
         try (CloseableHttpClient client = buildClient(signed);
              CloseableHttpResponse response = client.execute(request)) {
             int statusCode = response.getStatusLine().getStatusCode();
@@ -217,6 +221,9 @@ public class DarkClientImpl implements DarkClient {
                         : "Check authentication, permissions and endpoint configuration.";
                     Header errorHeader = response.getFirstHeader(ERROR_CODE_HEADER);
                     if (errorHeader != null && ERROR_CODE_PATTERN.matcher(errorHeader.getValue()).matches()) {
+                        if (HEADERS_REQUIRED_ERROR.equals(errorHeader.getValue())) {
+                            diagnostic = preparedHeadersDiagnostic;
+                        }
                         diagnostic = errorHeader.getValue() + ". " + diagnostic;
                     }
                     throw mapError(statusCode, diagnostic);
@@ -242,6 +249,26 @@ public class DarkClientImpl implements DarkClient {
                 : "Unable to communicate with dARK API.",
                                               DarkIdentifierException.INTERNAL_ERROR);
         }
+    }
+
+    /** Reports only fixed header names/presence; never values, signatures or tokens. */
+    private String signedHeadersDiagnostic(HttpUriRequest request) {
+        List<String> missing = SIGNED_AUTH_HEADERS.stream().filter(name -> {
+            Header[] headers = request.getHeaders(name);
+            if (headers.length != 1 || StringUtils.isBlank(headers[0].getValue())) {
+                return true;
+            }
+            String value = headers[0].getValue();
+            return value.length() > 512 || value.contains("\r") || value.contains("\n");
+        }).toList();
+        if (missing.isEmpty()) {
+            return "All six dARK headers were prepared locally; check proxy/gateway forwarding"
+                + " and the Minter header requirements.";
+        }
+        return "Missing or invalid dARK request headers: " + String.join(", ", missing) + "."
+            + (request.containsHeader(SIGNATURE_HEADER) ? " Check the client header preparation."
+                : " The request was not signed. For modifications, set " + DarkAuthenticationService.CFG_ENABLED
+                    + "=true in the server's effective configuration and restart the backend.");
     }
 
     private int timeoutMillis(String property, int defaultValue) {

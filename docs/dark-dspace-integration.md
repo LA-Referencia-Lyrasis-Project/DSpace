@@ -23,7 +23,7 @@ The integration has five parts:
   and a dARK.
 5. `dark` assigns dARKs to existing Items idempotently.
 
-## DARK2 authentication
+## dARK authentication
 
 Optional Ed25519 Minter authentication, CLI key generation and the administrative
 public-key/registration panel are described in
@@ -60,9 +60,9 @@ identifier.dark.authority-header.enabled = true
 identifier.dark.authority-header = X-Authority-Id
 ```
 
-Current Minters use DARK2 signed identity when enabled, or explicit
+Current Minters use dARK signed identity when enabled, or explicit
 `X-DARK-Authority-Id` otherwise. The legacy configurable authority header remains
-for older installations. Any gateway mTLS requirement is separate from DARK2.
+for older installations. Any gateway mTLS requirement is separate from dARK.
 
 ### Identifier metadata
 

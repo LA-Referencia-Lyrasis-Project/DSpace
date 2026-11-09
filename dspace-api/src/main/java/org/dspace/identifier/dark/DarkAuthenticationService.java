@@ -81,7 +81,7 @@ public class DarkAuthenticationService {
     @Autowired
     private ConfigurationService configurationService;
 
-    /** Whether DARK2 signing is explicitly enabled; legacy installations default to false. */
+    /** Whether dARK signing is explicitly enabled; legacy installations default to false. */
     public boolean isEnabled() {
         return configurationService.getBooleanProperty(CFG_ENABLED, false);
     }

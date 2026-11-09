@@ -1,4 +1,4 @@
-# dARK Minter authentication (DARK2)
+# dARK Minter authentication
 
 This adds optional Ed25519 authentication to the existing dARK client. It leaves
 identifier persistence, migrations, minting, batch correlation, metadata, Handle
@@ -119,9 +119,9 @@ redirecting URLs rather than following redirects. Clock synchronization is requi
 
 ## Existing headers and wire behavior
 
-DARK2 is per-request authentication, not a login, JWT, or bearer-token exchange.
+dARK is per-request authentication, not a login, JWT, or bearer-token exchange.
 The existing `identifier.dark.api-token` remains available for a separate gateway
-HTTP authentication layer; it does not replace DARK2.
+HTTP authentication layer; it does not replace dARK.
 
 The batch reservation POST and metadata PUT carry the six `X-DARK-*` headers.
 The UTF-8 JSON body is serialized once, hashed and sent unchanged. Canonical
@@ -404,3 +404,43 @@ An intentional change of the effective destination requires confirmation again;
 keys do not need to be regenerated. No database migration or reindex is needed.
 When rolling back, remember that the previous client automatically appended
 `/api/v1` to URLs that did not already end with that suffix.
+
+
+### Diagnosing SIGNED_AUTH_HEADERS_REQUIRED
+
+This Minter response does not establish whether the client sent a signature:
+the HTTP client maps all 401 responses through its sanitized authentication-error
+handler, including responses to unsigned requests.
+
+The client now snapshots the presence/basic shape of the six dARK headers before
+sending, and includes a fixed diagnostic if the Minter returns
+`X-DARK-Error-Code: SIGNED_AUTH_HEADERS_REQUIRED`:
+
+- `The request was not signed`: check the backend's effective
+  `identifier.dark.auth.enabled = true`, restart it, and confirm registration for
+  the current key, authority and complete HTTPS Minter URL.
+- `All six dARK headers were prepared locally`: check forwarding through any
+  reverse proxy/gateway between DSpace and Minter, and verify the Minter's header
+  requirements. Local preparation alone does not prove the headers arrived.
+- Missing, empty, duplicate or oversized headers are identified by their fixed
+  names only. No signature, nonce, authorization token, key value, raw response
+  body or request body is included in the diagnostic.
+
+No authentication rejection automatically resends a mutation or falls back to
+an unsigned request. The diagnostic does not register a key or bypass the existing
+registration check.
+
+Validation of this diagnostic passed with 40 focused unit/regression tests,
+including signed and unsigned `SIGNED_AUTH_HEADERS_REQUIRED` responses, and
+Checkstyle for the changed client and tests. The existing focused Maven test
+command above was used. Focused style validation was:
+
+```bash
+mvn -pl dspace-api -am checkstyle:check \
+  '-Dcheckstyle.includes=**/DarkClientImpl.java,**/DarkClientAuthenticationTest.java'
+```
+
+These checks do not establish the remote server's effective configuration or
+prove which headers a remote proxy forwarded. Confirm the effective setting on
+that backend and use the fixed diagnostic from its next attempt to distinguish
+those cases; do not capture or share raw authentication headers.
