@@ -63,7 +63,6 @@ public class DarkAuthenticationService {
     private static final String REGISTRATION_TEMP_SUFFIX = ".tmp";
     private static final String KEYS_BOUNDARY_DIRECTORY = "keys";
     private static final String DEFAULT_KEY_DIRECTORY = "dark";
-    private static final String API_V1_SUFFIX = "/api/v1";
     private static final String PAIR_CHALLENGE = "dARK credential pair verification";
 
     /** Owner-only access for credential directories and files; no group or other bits are ever accepted. */
@@ -237,7 +236,7 @@ public class DarkAuthenticationService {
         if (uri.getRawQuery() != null) {
             throw new Failure("MINTER_URL_HAS_QUERY");
         }
-        return url.endsWith(API_V1_SUFFIX) ? url : url + API_V1_SUFFIX;
+        return url;
     }
 
     /** Signs a modification, refusing invalid identity, transport, key or permissions. */

@@ -55,7 +55,7 @@ public class DarkAuthenticationServiceTest {
         when(configuration.getProperty("dspace.dir")).thenReturn(root.toString());
         when(configuration.getProperty(anyString(), anyString())).thenAnswer(call -> call.getArgument(1));
         when(configuration.getProperty("identifier.dark.authority-id")).thenReturn(AUTHORITY);
-        when(configuration.getProperty(DarkClientImpl.CFG_MINTER_API_URL)).thenReturn("https://example.org");
+        when(configuration.getProperty(DarkClientImpl.CFG_MINTER_API_URL)).thenReturn("https://example.org/api/v1");
         service = new DarkAuthenticationService();
         ReflectionTestUtils.setField(service, "configurationService", configuration);
     }
@@ -183,6 +183,19 @@ public class DarkAuthenticationServiceTest {
         when(configuration.getProperty(DarkClientImpl.CFG_MINTER_API_URL)).thenReturn("https://other.example.org");
         assertEquals("pending_registration", service.status().state());
         assertSigningFails();
+    }
+
+    @Test
+    public void registrationUsesConfiguredRootWithoutAppendingVersionPrefix() throws Exception {
+        service.generate();
+        when(configuration.getProperty(DarkClientImpl.CFG_MINTER_API_URL)).thenReturn(" https://example.org/ ");
+        assertEquals("https://example.org", service.status().minterApiUrl());
+        service.confirmRegistration(service.status().keyId(), AUTHORITY, "https://example.org", true);
+        assertEquals(AUTHORITY, service.headers("POST", URI.create("https://example.org/arks/batch"),
+            AUTHORITY, new byte[0]).get("X-DARK-Authority-Id"));
+        when(configuration.getProperty(DarkClientImpl.CFG_MINTER_API_URL)).thenReturn("https://example.org/api/v1");
+        assertThrows(DarkIdentifierException.class, () -> service.headers("POST",
+            URI.create("https://example.org/api/v1/arks/batch"), AUTHORITY, new byte[0]));
     }
 
     private Path keys() {

@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -116,6 +117,46 @@ public class DarkClientAuthenticationTest {
         assertEquals("PUT", update.getMethod());
         assertTrue(update.containsHeader("X-DARK-Signature"));
         assertEquals("/prefix/api/v1/arks/ark:12345/test", update.getURI().getRawPath());
+    }
+
+    @Test
+    public void signedRequestsUseOnlyTheConfiguredBaseUrl() throws Exception {
+        assertConfiguredBaseUrls(true);
+    }
+
+    @Test
+    public void unsignedRequestsUseOnlyTheConfiguredBaseUrl() throws Exception {
+        assertConfiguredBaseUrls(false);
+    }
+
+    private void assertConfiguredBaseUrls(boolean signed) throws Exception {
+        when(configuration.getBooleanProperty(DarkAuthenticationService.CFG_ENABLED, false)).thenReturn(signed);
+        for (String base : List.of("https://example.org", "https://example.org/",
+            "https://example.org/api/v1/", "https://example.org/gateway/minter/")) {
+            clearInvocations(http);
+            when(configuration.getProperty(DarkClientImpl.CFG_MINTER_API_URL)).thenReturn(base);
+            String normalized = org.apache.commons.lang3.StringUtils.removeEnd(base, "/");
+            if (signed) {
+                authentication.confirmRegistration(authentication.status().keyId(), AUTHORITY, normalized, true);
+            }
+            reply(200, "{\"results\":[{\"ark\":\"ark:12345/test\"}]}");
+            dark.reserveARKs(AUTHORITY, "12345", List.of("item"));
+            reply(200, "{\"ark\":\"ark:12345/test\",\"status\":\"D\"}");
+            dark.getARK("ark:12345/test");
+            DarkMetadataRequest metadata = new DarkMetadataRequest();
+            metadata.setAuthorityId(AUTHORITY);
+            dark.updateMetadata("ark:12345/test", metadata);
+
+            ArgumentCaptor<HttpUriRequest> requests = ArgumentCaptor.forClass(HttpUriRequest.class);
+            verify(http, times(3)).execute(requests.capture());
+            List<HttpUriRequest> sent = requests.getAllValues();
+            assertEquals(normalized + "/arks/batch", sent.get(0).getURI().toString());
+            assertEquals(normalized + "/arks/ark:12345/test", sent.get(1).getURI().toString());
+            assertEquals(normalized + "/arks/ark:12345/test", sent.get(2).getURI().toString());
+            assertEquals(signed, sent.get(0).containsHeader("X-DARK-Signature"));
+            assertFalse(sent.get(1).containsHeader("X-DARK-Signature"));
+            assertEquals(signed, sent.get(2).containsHeader("X-DARK-Signature"));
+        }
     }
 
     @Test

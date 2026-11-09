@@ -53,7 +53,6 @@ public class DarkClientImpl implements DarkClient {
     /** Bounds the wait for a Minter response; reservations may be slow, but never unbounded (guide §20). */
     private static final int DEFAULT_READ_TIMEOUT_MS = 90_000;
 
-    private static final String API_V1_SUFFIX = "/api/v1";
     private static final String DEFAULT_AUTHORITY_HEADER = "X-Authority-Id";
     private static final String AUTHORITY_ID_HEADER = "X-DARK-Authority-Id";
     private static final String SIGNATURE_HEADER = "X-DARK-Signature";
@@ -137,11 +136,7 @@ public class DarkClientImpl implements DarkClient {
             throw new DarkIdentifierException("Missing required configuration: " + CFG_MINTER_API_URL);
         }
 
-        url = StringUtils.removeEnd(url.trim(), "/");
-        if (!url.endsWith(API_V1_SUFFIX)) {
-            url = url + API_V1_SUFFIX;
-        }
-        return url;
+        return StringUtils.removeEnd(url.trim(), "/");
     }
 
     private void applyHeaders(HttpUriRequest request, String authorityId) throws DarkIdentifierException {

@@ -45,6 +45,11 @@ identifier.dark.authority-id = platform-demo-1788435035
 identifier.dark.naan = 12345
 ```
 
+`identifier.dark.minter-api-url` is the complete API base URL. Include `/api/v1`
+explicitly if the deployment requires it; DSpace does not append a version prefix.
+See [base URL migration](dark-minter-authentication.md#explicit-minter-base-url-2026-11-09)
+when upgrading an installation that previously relied on automatic completion.
+
 The authority and NAAN must exist and be provisioned in the dARK platform
 before the first assignment. The bearer token is optional and is only needed
 when the API is protected by HTTP authentication:

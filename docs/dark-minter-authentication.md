@@ -74,8 +74,9 @@ key bytes, passwords, or signing seeds belong in configuration.
 1. Obtain the exact authority UUID, authorized NAAN, HTTPS Minter URL and
    confirmation of `MINTER_SIGNED_AUTH_ENABLED` from the dARK operator.
 2. Set the existing `identifier.dark.authority-id`, `identifier.dark.naan` and
-   `identifier.dark.minter-api-url` to the operator's values. As before, `/api/v1`
-   is appended when absent. Set `identifier.dark.auth.enabled = true` and restart
+   `identifier.dark.minter-api-url` to the operator's values. Include the complete
+   API base path (for example `/api/v1`); no suffix is appended automatically.
+   Set `identifier.dark.auth.enabled = true` and restart
    DSpace. Signed modifications are paused until key generation and registration
    confirmation are complete; reads still work.
 3. Sign in as a site administrator and open **dARK authentication** in the admin
@@ -377,3 +378,29 @@ AOT template compilation and ESLint. Commands were the existing focused
 `ESLINT_USE_FLAT_CONFIG=false ./node_modules/.bin/eslint src/app/admin/admin-dark-auth --fix`.
 The user's browser-session confirmation was not submitted by the agent; remote
 registration and the explicit confirmation remain operator/administrator actions.
+
+
+### Explicit Minter base URL (2026-11-09)
+
+`identifier.dark.minter-api-url` now specifies the complete API base URL. Both the
+HTTP client and authentication/registration binding use that configured URL, with
+surrounding whitespace and one trailing slash removed, without appending `/api/v1`.
+For the sandbox configure:
+
+```properties
+identifier.dark.minter-api-url = https://sandbox.dark-pid.net/api/v1
+```
+
+A root URL such as `https://example.org` now sends reservation requests to
+`https://example.org/arks/batch`. A custom base such as
+`https://example.org/gateway/minter` sends them to
+`https://example.org/gateway/minter/arks/batch`. The same base applies to metadata
+updates and reads.
+
+Migration: before updating an installation that omitted `/api/v1` while relying
+on automatic completion, add that prefix explicitly to its configured URL. This
+preserves the effective destination and its existing registration confirmation.
+An intentional change of the effective destination requires confirmation again;
+keys do not need to be regenerated. No database migration or reindex is needed.
+When rolling back, remember that the previous client automatically appended
+`/api/v1` to URLs that did not already end with that suffix.
