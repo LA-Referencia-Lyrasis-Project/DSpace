@@ -23,6 +23,13 @@ The integration has five parts:
   and a dARK.
 5. `dark` assigns dARKs to existing Items idempotently.
 
+## DARK2 authentication
+
+Optional Ed25519 Minter authentication, CLI key generation and the administrative
+public-key/registration panel are described in
+[dARK Minter authentication](dark-minter-authentication.md). Authentication is
+disabled by default; existing unsigned workflows require no key migration.
+
 ## Configuration
 
 The source configuration is in `dspace/config/modules/dark.cfg`. After
@@ -48,8 +55,9 @@ identifier.dark.authority-header.enabled = true
 identifier.dark.authority-header = X-Authority-Id
 ```
 
-In production, authority identity should use mTLS. The authority header exists
-for local profiles in which the Minter accepts it.
+Current Minters use DARK2 signed identity when enabled, or explicit
+`X-DARK-Authority-Id` otherwise. The legacy configurable authority header remains
+for older installations. Any gateway mTLS requirement is separate from DARK2.
 
 ### Identifier metadata
 

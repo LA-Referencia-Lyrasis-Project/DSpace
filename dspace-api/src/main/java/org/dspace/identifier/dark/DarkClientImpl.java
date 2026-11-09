@@ -12,20 +12,24 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.dspace.app.client.DSpaceHttpClientFactory;
@@ -41,9 +45,21 @@ public class DarkClientImpl implements DarkClient {
     public static final String CFG_API_TOKEN = "identifier.dark.api-token";
     public static final String CFG_AUTHORITY_HEADER = "identifier.dark.authority-header";
     public static final String CFG_AUTHORITY_HEADER_ENABLED = "identifier.dark.authority-header.enabled";
+    public static final String CFG_CONNECT_TIMEOUT_MS = "identifier.dark.connect-timeout-ms";
+    public static final String CFG_READ_TIMEOUT_MS = "identifier.dark.read-timeout-ms";
+
+    /** Bounds connection establishment so an unreachable Minter cannot hold a harvest thread indefinitely. */
+    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 10_000;
+    /** Bounds the wait for a Minter response; reservations may be slow, but never unbounded (guide §20). */
+    private static final int DEFAULT_READ_TIMEOUT_MS = 90_000;
 
     private static final String API_V1_SUFFIX = "/api/v1";
     private static final String DEFAULT_AUTHORITY_HEADER = "X-Authority-Id";
+    private static final String AUTHORITY_ID_HEADER = "X-DARK-Authority-Id";
+    private static final String SIGNATURE_HEADER = "X-DARK-Signature";
+    private static final String ERROR_CODE_HEADER = "X-DARK-Error-Code";
+    /** Machine-readable Minter error codes only; anything else is never echoed into exception messages. */
+    private static final Pattern ERROR_CODE_PATTERN = Pattern.compile("[A-Z][A-Z0-9_]{0,127}");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -52,6 +68,9 @@ public class DarkClientImpl implements DarkClient {
 
     @Autowired(required = true)
     protected DSpaceHttpClientFactory httpClientFactory;
+
+    @Autowired
+    protected DarkAuthenticationService authenticationService;
 
     @Override
     public DarkArkResponse reserveARK(String authorityId, String naan, String clientItemId)
@@ -125,7 +144,7 @@ public class DarkClientImpl implements DarkClient {
         return url;
     }
 
-    private void applyHeaders(HttpUriRequest request, String authorityId) {
+    private void applyHeaders(HttpUriRequest request, String authorityId) throws DarkIdentifierException {
         request.setHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.getMimeType());
         if (request instanceof HttpPost || request instanceof HttpPut) {
             request.setHeader(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType());
@@ -136,6 +155,25 @@ public class DarkClientImpl implements DarkClient {
             request.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token.trim());
         }
 
+        if (authenticationService.isEnabled()) {
+            if (request instanceof HttpEntityEnclosingRequest modification) {
+                try {
+                    byte[] body = EntityUtils.toByteArray(modification.getEntity());
+                    authenticationService.headers(request.getMethod(), request.getURI(), authorityId, body)
+                        .forEach(request::setHeader);
+                } catch (IOException e) {
+                    throw new DarkIdentifierException("Unable to prepare dARK signature.",
+                        DarkIdentifierException.AUTHENTICATION_ERROR);
+                }
+            }
+            return;
+        }
+
+        // The current Minter requires this identity even with signature verification disabled.
+        // Retain the configurable legacy header as well for existing installations.
+        if (StringUtils.isNotBlank(authorityId)) {
+            request.setHeader(AUTHORITY_ID_HEADER, authorityId);
+        }
         boolean authorityHeaderEnabled = configurationService.getBooleanProperty(CFG_AUTHORITY_HEADER_ENABLED, true);
         if (authorityHeaderEnabled && StringUtils.isNotBlank(authorityId)) {
             String authorityHeader = configurationService.getProperty(CFG_AUTHORITY_HEADER, DEFAULT_AUTHORITY_HEADER);
@@ -143,32 +181,77 @@ public class DarkClientImpl implements DarkClient {
         }
     }
 
-    private StringEntity jsonEntity(Object payload) throws DarkIdentifierException {
+    private ByteArrayEntity jsonEntity(Object payload) throws DarkIdentifierException {
         try {
-            return new StringEntity(objectMapper.writeValueAsString(payload), ContentType.APPLICATION_JSON);
+            return new ByteArrayEntity(objectMapper.writeValueAsBytes(payload), ContentType.APPLICATION_JSON);
         } catch (JsonProcessingException e) {
             throw new DarkIdentifierException("Unable to serialize dARK request.", e,
                                               DarkIdentifierException.CONVERSION_ERROR);
         }
     }
 
+    private CloseableHttpClient buildClient(boolean signed) {
+        RequestConfig.Builder requestConfig = RequestConfig.custom()
+            .setConnectTimeout(timeoutMillis(CFG_CONNECT_TIMEOUT_MS, DEFAULT_CONNECT_TIMEOUT_MS))
+            .setConnectionRequestTimeout(timeoutMillis(CFG_CONNECT_TIMEOUT_MS, DEFAULT_CONNECT_TIMEOUT_MS))
+            .setSocketTimeout(timeoutMillis(CFG_READ_TIMEOUT_MS, DEFAULT_READ_TIMEOUT_MS));
+        if (signed) {
+            requestConfig.setNormalizeUri(false);
+        }
+        return httpClientFactory.build(builder -> {
+            // A signed request must reach the Minter byte-for-byte: no redirects, retries or compression.
+            if (signed) {
+                builder.disableAutomaticRetries().disableRedirectHandling().disableContentCompression();
+            }
+            builder.setDefaultRequestConfig(requestConfig.build());
+        });
+    }
+
     private <T> T execute(HttpUriRequest request, Class<T> responseType) throws DarkIdentifierException {
-        try (CloseableHttpClient client = httpClientFactory.build();
+        boolean signed = request.containsHeader(SIGNATURE_HEADER);
+        try (CloseableHttpClient client = buildClient(signed);
              CloseableHttpResponse response = client.execute(request)) {
             int statusCode = response.getStatusLine().getStatusCode();
             String content = response.getEntity() == null ? null : EntityUtils.toString(response.getEntity(), "UTF-8");
-            if (statusCode >= HttpStatus.SC_BAD_REQUEST) {
+            if (statusCode < HttpStatus.SC_OK || statusCode >= HttpStatus.SC_MULTIPLE_CHOICES) {
+                // Authentication responses may come from an untrusted gateway: expose no raw body.
+                if (signed || statusCode == HttpStatus.SC_UNAUTHORIZED || statusCode == HttpStatus.SC_FORBIDDEN) {
+                    String diagnostic = statusCode >= HttpStatus.SC_INTERNAL_SERVER_ERROR
+                        || statusCode == HttpStatus.SC_CONFLICT
+                        ? "Modification outcome may be unknown; reconcile before resending."
+                        : "Check authentication, permissions and endpoint configuration.";
+                    Header errorHeader = response.getFirstHeader(ERROR_CODE_HEADER);
+                    if (errorHeader != null && ERROR_CODE_PATTERN.matcher(errorHeader.getValue()).matches()) {
+                        diagnostic = errorHeader.getValue() + ". " + diagnostic;
+                    }
+                    throw mapError(statusCode, diagnostic);
+                }
                 throw mapError(statusCode, content);
             }
             if (StringUtils.isBlank(content)) {
-                throw new DarkIdentifierException("dARK API returned an empty response.",
+                throw new DarkIdentifierException(signed
+                    ? "dARK modification outcome is unknown: empty response; reconcile before resending."
+                    : "dARK API returned an empty response.",
                                                   DarkIdentifierException.BAD_ANSWER);
             }
-            return objectMapper.readValue(content, responseType);
+            T result = objectMapper.readValue(content, responseType);
+            if (signed && result == null) {
+                throw new DarkIdentifierException(
+                    "dARK modification outcome is unknown: invalid response; reconcile before resending.",
+                    DarkIdentifierException.BAD_ANSWER);
+            }
+            return result;
         } catch (IOException e) {
-            throw new DarkIdentifierException("Unable to communicate with dARK API.", e,
+            throw new DarkIdentifierException(signed
+                ? "dARK modification outcome is unknown; reconcile before resending."
+                : "Unable to communicate with dARK API.",
                                               DarkIdentifierException.INTERNAL_ERROR);
         }
+    }
+
+    private int timeoutMillis(String property, int defaultValue) {
+        int configured = configurationService.getIntProperty(property, defaultValue);
+        return configured > 0 ? configured : defaultValue;
     }
 
     private DarkIdentifierException mapError(int statusCode, String content) {
