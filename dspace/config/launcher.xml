@@ -352,4 +352,11 @@
             <class>org.dspace.iiif.canvasdimension.CanvasDimensionCLI</class>
         </step>
     </command>
+    <command>
+        <name>dark-auth</name>
+        <description>Generate a dedicated dARK Ed25519 key pair (local CLI only)</description>
+        <step>
+            <class>org.dspace.app.dark.DarkAuth</class>
+        </step>
+    </command>
 </commands>

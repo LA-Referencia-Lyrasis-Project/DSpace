@@ -16,26 +16,35 @@ import java.util.UUID;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.apache.commons.lang3.StringUtils;
+import org.dspace.app.rest.model.DarkAuthenticationRest;
+import org.dspace.app.rest.model.DarkRegistrationConfirmationRest;
 import org.dspace.app.rest.utils.ContextUtil;
 import org.dspace.content.Item;
 import org.dspace.core.Context;
 import org.dspace.identifier.DARK;
+import org.dspace.identifier.dark.DarkAuthenticationService;
+import org.dspace.identifier.dark.DarkIdentifierException;
 import org.dspace.identifier.service.DarkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Administrative read API for the local dARK registry.
+ * Administrative API for the local dARK registry and authentication configuration.
  *
  * Minting is intentionally performed through the existing {@code dark} script,
  * which creates a DSpace process and keeps long-running work out of HTTP requests.
@@ -49,6 +58,48 @@ public class DarkAdminRestController {
 
     @Autowired
     private DarkService darkService;
+
+    @Autowired
+    private DarkAuthenticationService authenticationService;
+
+    /** Public-only configuration, available exclusively to site administrators. */
+    @GetMapping("/authentication")
+    public DarkAuthenticationRest authentication(HttpServletResponse response) {
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        return DarkAuthenticationRest.from(authenticationService.status());
+    }
+
+    /** Generates keys using the same protected routine as the CLI, with public-only output. */
+    @PostMapping("/authentication/keys")
+    public DarkAuthenticationRest generateKeys(HttpServletResponse response) {
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        if (!authenticationService.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Enable dARK authentication before generating keys from the administration interface.");
+        }
+        try {
+            authenticationService.generate();
+            response.setStatus(HttpServletResponse.SC_CREATED);
+            return DarkAuthenticationRest.from(authenticationService.status());
+        } catch (DarkIdentifierException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Unable to generate dARK keys; existing keys are never overwritten. Check server storage permissions.");
+        }
+    }
+
+    /** Confirms registration performed by the dARK administrator; never accepts or returns private material. */
+    @PostMapping("/authentication/registration")
+    public DarkAuthenticationRest confirmRegistration(
+        @Valid @RequestBody DarkRegistrationConfirmationRest confirmation, HttpServletResponse response) {
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        try {
+            return DarkAuthenticationRest.from(authenticationService.confirmRegistration(confirmation.keyId(),
+                confirmation.authorityId(), confirmation.minterApiUrl(), confirmation.confirmed()));
+        } catch (DarkIdentifierException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Unable to confirm current dARK registration; refresh configuration and try again.");
+        }
+    }
 
     @GetMapping
     public DarkPage list(@RequestParam(defaultValue = "assigned") String view,

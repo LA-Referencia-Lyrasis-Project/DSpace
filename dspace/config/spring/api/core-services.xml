@@ -127,6 +127,7 @@
     <bean class="org.dspace.identifier.DOIServiceImpl"/>
     <bean class="org.dspace.identifier.DarkServiceImpl"/>
     <bean class="org.dspace.identifier.dark.DarkClientImpl"/>
+    <bean class="org.dspace.identifier.dark.DarkAuthenticationService"/>
     <bean class="org.dspace.identifier.dark.DarkMetadataBuilder"/>
 
     <bean class="org.dspace.license.CreativeCommonsServiceImpl"/>
